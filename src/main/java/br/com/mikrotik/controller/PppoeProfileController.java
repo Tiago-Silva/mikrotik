@@ -1,6 +1,7 @@
 package br.com.mikrotik.controller;
 
 import br.com.mikrotik.dto.PppoeProfileDTO;
+import br.com.mikrotik.dto.SyncResultDTO;
 import br.com.mikrotik.service.PppoeProfileService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -70,5 +71,18 @@ public class PppoeProfileController {
         log.info("Deletando perfil PPPoE: {}", id);
         service.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/sync/server/{serverId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @Operation(
+        summary = "Sincronizar profiles do Mikrotik",
+        description = "Importa todos os profiles PPPoE existentes no servidor Mikrotik para o banco de dados. " +
+                      "Profiles que já existem no banco serão ignorados."
+    )
+    public ResponseEntity<SyncResultDTO> syncFromMikrotik(@PathVariable Long serverId) {
+        log.info("Iniciando sincronização de profiles do servidor {}", serverId);
+        SyncResultDTO result = service.syncProfilesFromMikrotik(serverId);
+        return ResponseEntity.ok(result);
     }
 }
