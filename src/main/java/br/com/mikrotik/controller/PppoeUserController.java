@@ -1,0 +1,94 @@
+package br.com.mikrotik.controller;
+
+import br.com.mikrotik.dto.PppoeUserDTO;
+import br.com.mikrotik.service.PppoeUserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import jakarta.validation.Valid;
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/users")
+@RequiredArgsConstructor
+@Slf4j
+@SecurityRequirement(name = "Bearer Token")
+@Tag(name = "Usuários PPPoE", description = "Gerenciar usuários PPPoE")
+public class PppoeUserController {
+
+    private final PppoeUserService service;
+
+    @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @Operation(summary = "Criar novo usuário", description = "Criar novo usuário PPPoE no servidor Mikrotik")
+    public ResponseEntity<PppoeUserDTO> create(@Valid @RequestBody PppoeUserDTO dto) {
+        log.info("Criando novo usuário PPPoE: {}", dto.getUsername());
+        PppoeUserDTO created = service.create(dto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @Operation(summary = "Obter usuário por ID", description = "Retorna detalhes de um usuário específico")
+    public ResponseEntity<PppoeUserDTO> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(service.getById(id));
+    }
+
+    @GetMapping("/server/{serverId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @Operation(summary = "Listar usuários de um servidor", description = "Retorna todos os usuários de um servidor Mikrotik com paginação")
+    public ResponseEntity<Page<PppoeUserDTO>> getByServer(@PathVariable Long serverId, Pageable pageable) {
+        return ResponseEntity.ok(service.getByServer(serverId, pageable));
+    }
+
+    @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @Operation(summary = "Listar todos os usuários", description = "Retorna lista de todos os usuários PPPoE")
+    public ResponseEntity<List<PppoeUserDTO>> getAll() {
+        return ResponseEntity.ok(service.getAll());
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @Operation(summary = "Atualizar usuário", description = "Modificar dados de um usuário existente")
+    public ResponseEntity<PppoeUserDTO> update(@PathVariable Long id, @Valid @RequestBody PppoeUserDTO dto) {
+        log.info("Atualizando usuário PPPoE: {}", id);
+        return ResponseEntity.ok(service.update(id, dto));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Deletar usuário", description = "Remover um usuário PPPoE do servidor Mikrotik")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        log.info("Deletando usuário PPPoE: {}", id);
+        service.delete(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/disable")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @Operation(summary = "Desativar usuário", description = "Desativar um usuário PPPoE sem deletá-lo")
+    public ResponseEntity<Void> disable(@PathVariable Long id) {
+        log.info("Desativando usuário PPPoE: {}", id);
+        service.disable(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/enable")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @Operation(summary = "Ativar usuário", description = "Reativar um usuário PPPoE desativado")
+    public ResponseEntity<Void> enable(@PathVariable Long id) {
+        log.info("Ativando usuário PPPoE: {}", id);
+        service.enable(id);
+        return ResponseEntity.noContent().build();
+    }
+}
