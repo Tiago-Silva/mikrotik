@@ -16,4 +16,5 @@ public interface PppoeUserRepository extends JpaRepository<PppoeUser, Long> {
     List<PppoeUser> findByMikrotikServer(MikrotikServer server);
     Page<PppoeUser> findByMikrotikServer(MikrotikServer server, Pageable pageable);
     List<PppoeUser> findByActiveAndMikrotikServer(Boolean active, MikrotikServer server);
+    Long countByActiveTrue();
 }
