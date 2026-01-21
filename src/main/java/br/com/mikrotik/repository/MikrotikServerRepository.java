@@ -9,4 +9,5 @@ import java.util.Optional;
 public interface MikrotikServerRepository extends JpaRepository<MikrotikServer, Long> {
     Optional<MikrotikServer> findByName(String name);
     Optional<MikrotikServer> findByIpAddress(String ipAddress);
+    Long countByActiveTrue();
 }
