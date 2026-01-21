@@ -61,6 +61,7 @@ public class SecurityConfig {
                         .requestMatchers("/v3/api-docs/**").permitAll()
                         .requestMatchers("/v3/api-docs").permitAll()
                         .requestMatchers("/health").permitAll()
+                        .requestMatchers("/api/dashboard/**").hasAnyRole("ADMIN", "OPERATOR", "VIEWER")
                         .requestMatchers("/api/mikrotik-servers/**").hasAnyRole("ADMIN")
                         .requestMatchers("/api/profiles/**").hasAnyRole("ADMIN", "OPERATOR")
                         .requestMatchers("/api/users/**").hasAnyRole("ADMIN", "OPERATOR")
