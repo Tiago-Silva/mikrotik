@@ -121,6 +121,14 @@ DELETE {{baseUrl}}/profiles/1
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
+### 14b. Sincronizar Perfis do Mikrotik
+# Importa todos os perfis PPPoE já existentes no Mikrotik para o banco de dados
+# serverId: ID do servidor Mikrotik
+# Perfis que já existem no banco serão ignorados
+POST {{baseUrl}}/profiles/sync/server/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
 ### ========== USUÁRIOS PPPOE ==========
 
 ### 15. Criar Novo Usuário PPPoE
