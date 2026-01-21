@@ -127,6 +127,7 @@ PUT    /api/users/{id}                 - Atualizar usuário
 DELETE /api/users/{id}                 - Deletar usuário
 POST   /api/users/{id}/disable         - Desativar usuário
 POST   /api/users/{id}/enable          - Ativar usuário
+POST   /api/users/sync/server/{serverId}/profile/{profileId} - Sincronizar usuários do Mikrotik
 ```
 
 ### Conexões PPPoE
@@ -203,6 +204,29 @@ curl -X POST http://localhost:8080/api/users \
     "mikrotikServerId": 1
   }'
 ```
+
+### 5. Sincronizar Usuários Existentes do Mikrotik
+```bash
+# Sincronizar todos os usuários PPPoE já existentes no Mikrotik com o banco de dados
+# Ideal quando você já tem usuários criados no Mikrotik e quer importá-los
+curl -X POST http://localhost:8080/api/users/sync/server/1/profile/1 \
+  -H "Authorization: Bearer <token>"
+
+# Resposta:
+{
+  "totalMikrotikUsers": 25,
+  "syncedUsers": 23,
+  "skippedUsers": 2,
+  "failedUsers": 0,
+  "syncedUsernames": ["user1", "user2", "user3", ...],
+  "skippedUsernames": ["admin", "test"],
+  "errorMessages": []
+}
+```
+
+> **Nota**: A sincronização é útil quando você já possui usuários PPPoE criados diretamente no Mikrotik e deseja 
+> importá-los para o banco de dados sem precisar criar um por um. Usuários que já existem no banco serão ignorados 
+> automaticamente. O `profileId` é usado como perfil padrão para usuários que não têm um perfil correspondente no banco.
 
 ## 📊 Estrutura do Banco de Dados
 
