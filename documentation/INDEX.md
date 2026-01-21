@@ -7,6 +7,7 @@
 | [API_README.md](API_README.md) | 📘 Documentação completa da API com exemplos de uso |
 | [QUICK_START.md](QUICK_START.md) | ⚡ Guia de início rápido (5 minutos) |
 | [DEVELOPMENT.md](DEVELOPMENT.md) | 🛠️ Guia de desenvolvimento e padrões |
+| [SYNC_USERS.md](SYNC_USERS.md) | 🔄 Guia de sincronização de usuários PPPoE do Mikrotik |
 | [SUMMARY.md](SUMMARY.md) | 📊 Sumário executivo do projeto |
 | [INDEX.md](INDEX.md) | 📚 Este arquivo |
 
