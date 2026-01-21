@@ -93,19 +93,20 @@ public class PppoeUserController {
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/sync/server/{serverId}/profile/{profileId}")
+    @PostMapping("/sync/server/{serverId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
     @Operation(
         summary = "Sincronizar usuários do Mikrotik",
         description = "Importa todos os usuários PPPoE existentes no servidor Mikrotik para o banco de dados. " +
                       "Usuários que já existem no banco serão ignorados. " +
-                      "O profileId é usado como perfil padrão para usuários sem perfil correspondente."
+                      "Se forceProfileId for informado, todos os usuários serão vinculados a esse perfil. " +
+                      "Se não informado, mantém os perfis originais do MikroTik (busca por nome no banco)."
     )
     public ResponseEntity<SyncResultDTO> syncFromMikrotik(
             @PathVariable Long serverId,
-            @PathVariable Long profileId) {
-        log.info("Iniciando sincronização de usuários do servidor {} com perfil padrão {}", serverId, profileId);
-        SyncResultDTO result = service.syncUsersFromMikrotik(serverId, profileId);
+            @RequestParam(required = false) Long forceProfileId) {
+        log.info("Iniciando sincronização de usuários do servidor {} com perfil forçado: {}", serverId, forceProfileId);
+        SyncResultDTO result = service.syncUsersFromMikrotik(serverId, forceProfileId);
         return ResponseEntity.ok(result);
     }
 }
