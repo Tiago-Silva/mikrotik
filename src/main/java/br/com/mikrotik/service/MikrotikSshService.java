@@ -1,5 +1,6 @@
 package br.com.mikrotik.service;
 
+import br.com.mikrotik.dto.MikrotikPppoeUserDTO;
 import br.com.mikrotik.exception.MikrotikConnectionException;
 import com.jcraft.jsch.*;
 import lombok.extern.slf4j.Slf4j;
@@ -8,6 +9,8 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 @Slf4j
@@ -68,7 +71,7 @@ public class MikrotikSshService {
                 "/ppp secret add name=%s password=%s profile=%s service=pppoe",
                 pppoeUsername, pppoePassword, profileName
         );
-        executeCommand(host, port, username, password, "/interface/pppoe-server/remote-access");
+        executeCommand(host, port, username, password, command);
         log.info("Usuário PPPoE criado: {}", pppoeUsername);
     }
 
@@ -98,5 +101,75 @@ public class MikrotikSshService {
     public List<String> listPppoeUsers(String host, Integer port, String username, String password) {
         String command = "/ppp secret print";
         return executeCommand(host, port, username, password, command);
+    }
+
+    public List<MikrotikPppoeUserDTO> getPppoeUsersStructured(String host, Integer port, String username, String password) {
+        List<MikrotikPppoeUserDTO> users = new ArrayList<>();
+
+        try {
+            // Comando para listar secrets PPPoE com detalhes
+            String command = "/ppp secret print detail";
+            List<String> output = executeCommand(host, port, username, password, command);
+
+            MikrotikPppoeUserDTO currentUser = null;
+
+            for (String line : output) {
+                line = line.trim();
+
+                // Nova entrada de usuário
+                if (line.startsWith("Flags:") || line.matches("^\\d+.*")) {
+                    if (currentUser != null && currentUser.getUsername() != null) {
+                        users.add(currentUser);
+                    }
+                    currentUser = new MikrotikPppoeUserDTO();
+                    currentUser.setDisabled(line.contains("X") || line.contains("D"));
+                }
+
+                if (currentUser != null) {
+                    // Parsear campos
+                    if (line.contains("name=")) {
+                        currentUser.setUsername(extractValue(line, "name"));
+                    }
+                    if (line.contains("password=")) {
+                        currentUser.setPassword(extractValue(line, "password"));
+                    }
+                    if (line.contains("profile=")) {
+                        currentUser.setProfile(extractValue(line, "profile"));
+                    }
+                    if (line.contains("service=")) {
+                        currentUser.setService(extractValue(line, "service"));
+                    }
+                    if (line.contains("comment=")) {
+                        currentUser.setComment(extractValue(line, "comment"));
+                    }
+                }
+            }
+
+            // Adicionar último usuário
+            if (currentUser != null && currentUser.getUsername() != null) {
+                users.add(currentUser);
+            }
+
+            log.info("Total de {} usuários PPPoE encontrados no Mikrotik", users.size());
+            return users;
+
+        } catch (Exception e) {
+            log.error("Erro ao buscar usuários PPPoE do Mikrotik: {}", e.getMessage());
+            throw new MikrotikConnectionException("Erro ao buscar usuários PPPoE: " + e.getMessage());
+        }
+    }
+
+    private String extractValue(String line, String key) {
+        try {
+            // Padrão: key="value" ou key=value
+            Pattern pattern = Pattern.compile(key + "=\"?([^\"\\s]+)\"?");
+            Matcher matcher = pattern.matcher(line);
+            if (matcher.find()) {
+                return matcher.group(1);
+            }
+        } catch (Exception e) {
+            log.warn("Erro ao extrair valor de '{}': {}", key, e.getMessage());
+        }
+        return null;
     }
 }
