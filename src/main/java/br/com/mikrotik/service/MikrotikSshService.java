@@ -1,5 +1,6 @@
 package br.com.mikrotik.service;
 
+import br.com.mikrotik.dto.MikrotikPppoeProfileDTO;
 import br.com.mikrotik.dto.MikrotikPppoeUserDTO;
 import br.com.mikrotik.exception.MikrotikConnectionException;
 import com.jcraft.jsch.*;
@@ -171,5 +172,64 @@ public class MikrotikSshService {
             log.warn("Erro ao extrair valor de '{}': {}", key, e.getMessage());
         }
         return null;
+    }
+
+    public List<MikrotikPppoeProfileDTO> getPppoeProfilesStructured(String host, Integer port, String username, String password) {
+        List<MikrotikPppoeProfileDTO> profiles = new ArrayList<>();
+
+        try {
+            // Comando para listar profiles PPPoE com detalhes
+            String command = "/ppp profile print detail";
+            List<String> output = executeCommand(host, port, username, password, command);
+
+            MikrotikPppoeProfileDTO currentProfile = null;
+
+            for (String line : output) {
+                line = line.trim();
+
+                // Nova entrada de profile
+                if (line.startsWith("Flags:") || line.matches("^\\d+.*")) {
+                    if (currentProfile != null && currentProfile.getName() != null) {
+                        profiles.add(currentProfile);
+                    }
+                    currentProfile = new MikrotikPppoeProfileDTO();
+                    currentProfile.setDisabled(line.contains("X") || line.contains("D"));
+                }
+
+                if (currentProfile != null) {
+                    // Parsear campos
+                    if (line.contains("name=")) {
+                        currentProfile.setName(extractValue(line, "name"));
+                    }
+                    if (line.contains("local-address=")) {
+                        currentProfile.setLocalAddress(extractValue(line, "local-address"));
+                    }
+                    if (line.contains("remote-address=")) {
+                        currentProfile.setRemoteAddress(extractValue(line, "remote-address"));
+                    }
+                    if (line.contains("rate-limit=")) {
+                        currentProfile.setRateLimit(extractValue(line, "rate-limit"));
+                    }
+                    if (line.contains("session-timeout=")) {
+                        currentProfile.setSessionTimeout(extractValue(line, "session-timeout"));
+                    }
+                    if (line.contains("comment=")) {
+                        currentProfile.setComment(extractValue(line, "comment"));
+                    }
+                }
+            }
+
+            // Adicionar último profile
+            if (currentProfile != null && currentProfile.getName() != null) {
+                profiles.add(currentProfile);
+            }
+
+            log.info("Total de {} profiles PPPoE encontrados no Mikrotik", profiles.size());
+            return profiles;
+
+        } catch (Exception e) {
+            log.error("Erro ao buscar profiles PPPoE do Mikrotik: {}", e.getMessage());
+            throw new MikrotikConnectionException("Erro ao buscar profiles PPPoE: " + e.getMessage());
+        }
     }
 }
