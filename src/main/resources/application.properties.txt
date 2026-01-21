@@ -1,0 +1,42 @@
+spring.application.name=mikrotik
+
+# Server Configuration
+server.port=8080
+server.servlet.context-path=/
+server.error.include-message=always
+
+# Database Configuration - CORRIGIDO
+spring.datasource.url=jdbc:mysql://localhost:3306/auth_api?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8
+spring.datasource.username=root
+spring.datasource.password=live0102
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+
+# JPA/Hibernate Configuration
+spring.jpa.database-platform=org.hibernate.dialect.MySQLDialect
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=false
+spring.jpa.properties.hibernate.format_sql=true
+spring.jpa.properties.hibernate.use_sql_comments=true
+
+# Logging
+logging.level.root=INFO
+logging.level.br.com.mikrotik=DEBUG
+logging.level.org.springframework.security=DEBUG
+logging.pattern.console=%d{yyyy-MM-dd HH:mm:ss} - %msg%n
+
+# JWT Configuration
+jwt.secret=my-secret-key-for-mikrotik-api-security-change-in-production-environment-123456789
+jwt.expiration=86400000
+
+# Swagger/SpringDoc OpenAPI
+springdoc.api-docs.path=/v3/api-docs
+springdoc.swagger-ui.path=/swagger-ui.html
+springdoc.swagger-ui.operationsSorter=method
+springdoc.swagger-ui.tagsSorter=alpha
+
+# Configuração Mikrotik - ALTERE CONFORME SUA REALIDADE
+mikrotik.host=100.64.255.2
+mikrotik.port=22
+mikrotik.username=admin
+mikrotik.password=12123636TImary
+mikrotik.timeout=30000

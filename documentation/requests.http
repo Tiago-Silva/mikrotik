@@ -1,0 +1,235 @@
+### Mikrotik PPPoE Management API - REST Client Examples
+### Usar com extensão REST Client do VS Code ou similar
+
+@baseUrl = http://localhost:8080/api
+@token =
+
+### ========== AUTENTICAÇÃO ==========
+
+### 1. Login - Obter Token JWT
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "admin123"
+}
+
+### 2. Validar Token
+GET {{baseUrl}}/auth/validate?token={{token}}
+
+### ========== SERVIDORES MIKROTIK ==========
+
+### 3. Criar Novo Servidor
+POST {{baseUrl}}/mikrotik-servers
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Servidor Principal",
+  "ipAddress": "192.168.1.1",
+  "port": 22,
+  "username": "admin",
+  "password": "password123",
+  "description": "Servidor Mikrotik principal"
+}
+
+### 4. Listar Todos os Servidores
+GET {{baseUrl}}/mikrotik-servers
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 5. Obter Servidor por ID
+GET {{baseUrl}}/mikrotik-servers/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 6. Atualizar Servidor
+PUT {{baseUrl}}/mikrotik-servers/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Servidor Principal Atualizado",
+  "ipAddress": "192.168.1.1",
+  "port": 22,
+  "username": "admin",
+  "password": "newpassword123",
+  "description": "Servidor Mikrotik principal - Atualizado",
+  "active": true
+}
+
+### 7. Testar Conexão com Servidor
+POST {{baseUrl}}/mikrotik-servers/1/test-connection
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 8. Deletar Servidor
+DELETE {{baseUrl}}/mikrotik-servers/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### ========== PERFIS PPPOE ==========
+
+### 9. Criar Novo Perfil
+POST {{baseUrl}}/profiles
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Plano 10Mb",
+  "description": "10 Mbps download / 5 Mbps upload",
+  "maxBitrateDl": 10000000,
+  "maxBitrateUl": 5000000,
+  "sessionTimeout": 3600,
+  "active": true,
+  "mikrotikServerId": 1
+}
+
+### 10. Listar Todos os Perfis
+GET {{baseUrl}}/profiles
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 11. Obter Perfil por ID
+GET {{baseUrl}}/profiles/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 12. Listar Perfis de um Servidor
+GET {{baseUrl}}/profiles/server/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 13. Atualizar Perfil
+PUT {{baseUrl}}/profiles/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Plano 20Mb",
+  "description": "20 Mbps download / 10 Mbps upload",
+  "maxBitrateDl": 20000000,
+  "maxBitrateUl": 10000000,
+  "sessionTimeout": 3600,
+  "active": true,
+  "mikrotikServerId": 1
+}
+
+### 14. Deletar Perfil
+DELETE {{baseUrl}}/profiles/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### ========== USUÁRIOS PPPOE ==========
+
+### 15. Criar Novo Usuário PPPoE
+POST {{baseUrl}}/users
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "username": "cliente1",
+  "password": "senha123",
+  "email": "cliente1@example.com",
+  "comment": "Cliente de teste",
+  "active": true,
+  "profileId": 1,
+  "mikrotikServerId": 1
+}
+
+### 16. Listar Todos os Usuários
+GET {{baseUrl}}/users
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 17. Obter Usuário por ID
+GET {{baseUrl}}/users/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 18. Listar Usuários de um Servidor (com Paginação)
+GET {{baseUrl}}/users/server/1?page=0&size=20
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 19. Atualizar Usuário
+PUT {{baseUrl}}/users/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "username": "cliente1",
+  "password": "novasenha123",
+  "email": "cliente1-novo@example.com",
+  "comment": "Cliente atualizado",
+  "active": true,
+  "profileId": 1,
+  "mikrotikServerId": 1
+}
+
+### 20. Desativar Usuário
+POST {{baseUrl}}/users/1/disable
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 21. Ativar Usuário
+POST {{baseUrl}}/users/1/enable
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 22. Deletar Usuário
+DELETE {{baseUrl}}/users/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### ========== CONEXÕES PPPOE ==========
+
+### 23. Listar Todas as Conexões
+GET {{baseUrl}}/connections
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 24. Obter Conexão por ID
+GET {{baseUrl}}/connections/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 25. Listar Conexões de um Usuário
+GET {{baseUrl}}/connections/user/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 26. Listar Conexões de um Servidor (com Paginação)
+GET {{baseUrl}}/connections/server/1?page=0&size=20
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 27. Contar Conexões Ativas
+GET {{baseUrl}}/connections/active/count
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 28. Listar Conexões Ativas de um Servidor
+GET {{baseUrl}}/connections/server/1/active
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### ========== NOTAS ==========
+# Para usar este arquivo:
+# 1. Instale a extensão "REST Client" no VS Code
+# 2. Substitua @token pelo seu JWT token após fazer login
+# 3. Clique em "Send Request" ou "Send" acima de cada requisição
+# 4. Os IDs (1, 2, etc) devem ser ajustados conforme necessário
+
+### Exemplos de Variáveis (comentado):
+# Para fazer login primeiro:
+# POST http://localhost:8080/api/auth/login
+# Content-Type: application/json
+#
+# {
+#   "username": "admin",
+#   "password": "admin123"
+# }
+#
+# Copie o token da resposta e defina em @token acima
