@@ -97,7 +97,6 @@ public class PppoeUserService {
         PppoeUser user = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário PPPoE não encontrado: " + id));
 
-        MikrotikServer server = user.getMikrotikServer();
         PppoeProfile profile = profileRepository.findById(dto.getProfileId())
                 .orElseThrow(() -> new ResourceNotFoundException("Perfil PPPoE não encontrado"));
 
@@ -169,16 +168,22 @@ public class PppoeUserService {
     }
 
     @Transactional
-    public SyncResultDTO syncUsersFromMikrotik(Long serverId, Long defaultProfileId) {
+    public SyncResultDTO syncUsersFromMikrotik(Long serverId, Long forceProfileId) {
         SyncResultDTO result = new SyncResultDTO();
 
         // Buscar servidor
         MikrotikServer server = serverRepository.findById(serverId)
                 .orElseThrow(() -> new ResourceNotFoundException("Servidor Mikrotik não encontrado: " + serverId));
 
-        // Buscar perfil padrão
-        PppoeProfile defaultProfile = profileRepository.findById(defaultProfileId)
-                .orElseThrow(() -> new ResourceNotFoundException("Perfil PPPoE não encontrado: " + defaultProfileId));
+        // Se forceProfileId foi informado, buscar o perfil
+        PppoeProfile forceProfile = null;
+        if (forceProfileId != null) {
+            forceProfile = profileRepository.findById(forceProfileId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Perfil PPPoE não encontrado: " + forceProfileId));
+            log.info("Sincronização com perfil forçado: {} (ID: {})", forceProfile.getName(), forceProfileId);
+        } else {
+            log.info("Sincronização mantendo perfis originais do MikroTik");
+        }
 
         log.info("Iniciando sincronização de usuários do servidor {} (ID: {})", server.getName(), serverId);
 
@@ -229,16 +234,42 @@ public class PppoeUserService {
                     // Status ativo
                     newUser.setActive(mikrotikUser.getDisabled() == null || !mikrotikUser.getDisabled());
 
-                    // Buscar perfil pelo nome, se existir; senão usar padrão
-                    PppoeProfile profile = defaultProfile;
-                    if (mikrotikUser.getProfile() != null) {
-                        Optional<PppoeProfile> foundProfile = profileRepository
-                                .findByNameAndMikrotikServer(mikrotikUser.getProfile(), server);
-                        if (foundProfile.isPresent()) {
-                            profile = foundProfile.get();
+                    // Determinar qual perfil usar
+                    PppoeProfile profileToUse;
+
+                    if (forceProfile != null) {
+                        // Se forceProfileId foi informado, usar esse perfil para todos
+                        profileToUse = forceProfile;
+                    } else {
+                        // Buscar perfil pelo nome do MikroTik
+                        if (mikrotikUser.getProfile() != null) {
+                            Optional<PppoeProfile> foundProfile = profileRepository
+                                    .findByNameAndMikrotikServer(mikrotikUser.getProfile(), server);
+                            if (foundProfile.isPresent()) {
+                                profileToUse = foundProfile.get();
+                            } else {
+                                // Perfil não encontrado no banco
+                                result.setFailedUsers(result.getFailedUsers() + 1);
+                                String errorMsg = String.format("Perfil '%s' do usuário '%s' não encontrado no banco. " +
+                                        "Sincronize os perfis primeiro ou use forceProfileId.",
+                                        mikrotikUser.getProfile(), mikrotikUser.getUsername());
+                                result.getErrorMessages().add(errorMsg);
+                                log.warn(errorMsg);
+                                continue;
+                            }
+                        } else {
+                            // Usuário do MikroTik sem perfil
+                            result.setFailedUsers(result.getFailedUsers() + 1);
+                            String errorMsg = String.format("Usuário '%s' não possui perfil no MikroTik. " +
+                                    "Use forceProfileId para definir um perfil padrão.",
+                                    mikrotikUser.getUsername());
+                            result.getErrorMessages().add(errorMsg);
+                            log.warn(errorMsg);
+                            continue;
                         }
                     }
-                    newUser.setProfile(profile);
+
+                    newUser.setProfile(profileToUse);
                     newUser.setMikrotikServer(server);
                     newUser.setCreatedAt(LocalDateTime.now());
                     newUser.setUpdatedAt(LocalDateTime.now());
@@ -247,7 +278,8 @@ public class PppoeUserService {
 
                     result.setSyncedUsers(result.getSyncedUsers() + 1);
                     result.getSyncedUsernames().add(mikrotikUser.getUsername());
-                    log.info("Usuário {} sincronizado com sucesso", mikrotikUser.getUsername());
+                    log.info("Usuário {} sincronizado com perfil {}",
+                            mikrotikUser.getUsername(), profileToUse.getName());
 
                 } catch (Exception e) {
                     result.setFailedUsers(result.getFailedUsers() + 1);
