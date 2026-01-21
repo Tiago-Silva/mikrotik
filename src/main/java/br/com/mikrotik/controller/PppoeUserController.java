@@ -1,6 +1,7 @@
 package br.com.mikrotik.controller;
 
 import br.com.mikrotik.dto.PppoeUserDTO;
+import br.com.mikrotik.dto.SyncResultDTO;
 import br.com.mikrotik.service.PppoeUserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -90,5 +91,21 @@ public class PppoeUserController {
         log.info("Ativando usuário PPPoE: {}", id);
         service.enable(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/sync/server/{serverId}/profile/{profileId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @Operation(
+        summary = "Sincronizar usuários do Mikrotik",
+        description = "Importa todos os usuários PPPoE existentes no servidor Mikrotik para o banco de dados. " +
+                      "Usuários que já existem no banco serão ignorados. " +
+                      "O profileId é usado como perfil padrão para usuários sem perfil correspondente."
+    )
+    public ResponseEntity<SyncResultDTO> syncFromMikrotik(
+            @PathVariable Long serverId,
+            @PathVariable Long profileId) {
+        log.info("Iniciando sincronização de usuários do servidor {} com perfil padrão {}", serverId, profileId);
+        SyncResultDTO result = service.syncUsersFromMikrotik(serverId, profileId);
+        return ResponseEntity.ok(result);
     }
 }
