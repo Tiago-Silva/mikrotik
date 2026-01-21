@@ -183,19 +183,27 @@ DELETE {{baseUrl}}/users/1
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
+### 23. Sincronizar Usuários do Mikrotik
+# Importa todos os usuários PPPoE já existentes no Mikrotik para o banco de dados
+# serverId: ID do servidor Mikrotik
+# profileId: ID do perfil padrão a ser usado para usuários sem perfil correspondente
+POST {{baseUrl}}/users/sync/server/1/profile/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
 ### ========== CONEXÕES PPPOE ==========
 
-### 23. Listar Todas as Conexões
+### 24. Listar Todas as Conexões
 GET {{baseUrl}}/connections
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
-### 24. Obter Conexão por ID
+### 25. Obter Conexão por ID
 GET {{baseUrl}}/connections/1
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
-### 25. Listar Conexões de um Usuário
+### 26. Listar Conexões de um Usuário
 GET {{baseUrl}}/connections/user/1
 Authorization: Bearer {{token}}
 Content-Type: application/json
