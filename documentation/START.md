@@ -107,9 +107,10 @@ mikrotik/
 ✅ **CRUD Completo:**
    - Servidores Mikrotik (6 endpoints)
    - Perfis PPPoE (6 endpoints)
-   - Usuários PPPoE (8 endpoints)
+   - Usuários PPPoE (9 endpoints)
    - Conexões (6 endpoints)
 ✅ **Integração SSH com Mikrotik**  
+✅ **Sincronização de Usuários PPPoE do Mikrotik**  
 ✅ **Auditoria e Logging**  
 ✅ **Swagger UI**  
 ✅ **Roles: ADMIN, OPERATOR, VIEWER**  
@@ -160,6 +161,13 @@ curl -X POST http://localhost:8080/api/users \
     "profileId": 1,
     "mikrotikServerId": 1
   }'
+```
+
+### Sincronizar Usuários do Mikrotik
+```bash
+# Importar todos os usuários já existentes no Mikrotik
+curl -X POST http://localhost:8080/api/users/sync/server/1/profile/1 \
+  -H "Authorization: Bearer TOKEN"
 ```
 
 ---
