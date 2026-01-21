@@ -16,6 +16,8 @@ Esta API REST robusta e escalável permite que provedores de internet (ISPs), ad
 <br>
 ✅ **Gestão Completa de Usuários**: Crie, edite, ative, desative e delete usuários PPPoE diretamente no MikroTik via SSH.
 <br>
+✅ **Sincronização de Usuários**: Importe automaticamente todos os usuários PPPoE já existentes no MikroTik para o banco de dados.
+<br>
 ✅ **Monitoramento de Conexões**: Visualize conexões ativas, estatísticas de tráfego e histórico de sessões.
 <br>
 ✅ **Auditoria Completa**: Registro automático de todas as operações para rastreabilidade e compliance.
