@@ -13,21 +13,24 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SyncResultDTO {
-    private Integer totalMikrotikUsers;
-    private Integer syncedUsers;
-    private Integer skippedUsers;
-    private Integer failedUsers;
-    private List<String> syncedUsernames;
-    private List<String> skippedUsernames;
-    private List<String> errorMessages;
+    @Builder.Default
+    private Integer totalMikrotikUsers = 0;
 
-    public SyncResultDTO() {
-        this.syncedUsernames = new ArrayList<>();
-        this.skippedUsernames = new ArrayList<>();
-        this.errorMessages = new ArrayList<>();
-        this.totalMikrotikUsers = 0;
-        this.syncedUsers = 0;
-        this.skippedUsers = 0;
-        this.failedUsers = 0;
-    }
+    @Builder.Default
+    private Integer syncedUsers = 0;
+
+    @Builder.Default
+    private Integer skippedUsers = 0;
+
+    @Builder.Default
+    private Integer failedUsers = 0;
+
+    @Builder.Default
+    private List<String> syncedUsernames = new ArrayList<>();
+
+    @Builder.Default
+    private List<String> skippedUsernames = new ArrayList<>();
+
+    @Builder.Default
+    private List<String> errorMessages = new ArrayList<>();
 }
