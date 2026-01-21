@@ -1,6 +1,8 @@
 package br.com.mikrotik.service;
 
+import br.com.mikrotik.dto.MikrotikPppoeUserDTO;
 import br.com.mikrotik.dto.PppoeUserDTO;
+import br.com.mikrotik.dto.SyncResultDTO;
 import br.com.mikrotik.exception.ResourceNotFoundException;
 import br.com.mikrotik.model.MikrotikServer;
 import br.com.mikrotik.model.PppoeProfile;
@@ -18,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -163,6 +166,108 @@ public class PppoeUserService {
         user.setUpdatedAt(LocalDateTime.now());
         repository.save(user);
         log.info("Usuário PPPoE ativado: {}", id);
+    }
+
+    @Transactional
+    public SyncResultDTO syncUsersFromMikrotik(Long serverId, Long defaultProfileId) {
+        SyncResultDTO result = new SyncResultDTO();
+
+        // Buscar servidor
+        MikrotikServer server = serverRepository.findById(serverId)
+                .orElseThrow(() -> new ResourceNotFoundException("Servidor Mikrotik não encontrado: " + serverId));
+
+        // Buscar perfil padrão
+        PppoeProfile defaultProfile = profileRepository.findById(defaultProfileId)
+                .orElseThrow(() -> new ResourceNotFoundException("Perfil PPPoE não encontrado: " + defaultProfileId));
+
+        log.info("Iniciando sincronização de usuários do servidor {} (ID: {})", server.getName(), serverId);
+
+        try {
+            // Buscar usuários do Mikrotik
+            List<MikrotikPppoeUserDTO> mikrotikUsers = sshService.getPppoeUsersStructured(
+                    server.getIpAddress(),
+                    server.getPort(),
+                    server.getUsername(),
+                    server.getPassword()
+            );
+
+            result.setTotalMikrotikUsers(mikrotikUsers.size());
+
+            for (MikrotikPppoeUserDTO mikrotikUser : mikrotikUsers) {
+                try {
+                    // Verificar se usuário já existe no banco
+                    Optional<PppoeUser> existingUser = repository.findByUsernameAndMikrotikServer(
+                            mikrotikUser.getUsername(),
+                            server
+                    );
+
+                    if (existingUser.isPresent()) {
+                        // Usuário já existe, pular
+                        result.setSkippedUsers(result.getSkippedUsers() + 1);
+                        result.getSkippedUsernames().add(mikrotikUser.getUsername());
+                        log.debug("Usuário {} já existe no banco, pulando", mikrotikUser.getUsername());
+                        continue;
+                    }
+
+                    // Criar novo usuário no banco
+                    PppoeUser newUser = new PppoeUser();
+                    newUser.setUsername(mikrotikUser.getUsername());
+
+                    // Se a senha estiver disponível, usar; senão, usar padrão
+                    String password = mikrotikUser.getPassword() != null ?
+                            mikrotikUser.getPassword() : "synced123";
+                    newUser.setPassword(passwordEncoder.encode(password));
+
+                    // Email padrão baseado no username
+                    newUser.setEmail(mikrotikUser.getUsername() + "@synced.local");
+
+                    // Comentário
+                    String comment = mikrotikUser.getComment() != null ?
+                            mikrotikUser.getComment() : "Sincronizado do Mikrotik";
+                    newUser.setComment(comment);
+
+                    // Status ativo
+                    newUser.setActive(mikrotikUser.getDisabled() == null || !mikrotikUser.getDisabled());
+
+                    // Buscar perfil pelo nome, se existir; senão usar padrão
+                    PppoeProfile profile = defaultProfile;
+                    if (mikrotikUser.getProfile() != null) {
+                        Optional<PppoeProfile> foundProfile = profileRepository
+                                .findByNameAndMikrotikServer(mikrotikUser.getProfile(), server);
+                        if (foundProfile.isPresent()) {
+                            profile = foundProfile.get();
+                        }
+                    }
+                    newUser.setProfile(profile);
+                    newUser.setMikrotikServer(server);
+                    newUser.setCreatedAt(LocalDateTime.now());
+                    newUser.setUpdatedAt(LocalDateTime.now());
+
+                    repository.save(newUser);
+
+                    result.setSyncedUsers(result.getSyncedUsers() + 1);
+                    result.getSyncedUsernames().add(mikrotikUser.getUsername());
+                    log.info("Usuário {} sincronizado com sucesso", mikrotikUser.getUsername());
+
+                } catch (Exception e) {
+                    result.setFailedUsers(result.getFailedUsers() + 1);
+                    String errorMsg = String.format("Erro ao sincronizar %s: %s",
+                            mikrotikUser.getUsername(), e.getMessage());
+                    result.getErrorMessages().add(errorMsg);
+                    log.error(errorMsg, e);
+                }
+            }
+
+            log.info("Sincronização concluída. Total: {}, Sincronizados: {}, Pulados: {}, Falhas: {}",
+                    result.getTotalMikrotikUsers(), result.getSyncedUsers(),
+                    result.getSkippedUsers(), result.getFailedUsers());
+
+        } catch (Exception e) {
+            log.error("Erro ao buscar usuários do Mikrotik: {}", e.getMessage(), e);
+            result.getErrorMessages().add("Erro ao buscar usuários do Mikrotik: " + e.getMessage());
+        }
+
+        return result;
     }
 
     private PppoeUserDTO mapToDTO(PppoeUser user) {
