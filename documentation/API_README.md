@@ -115,6 +115,7 @@ GET    /api/profiles/{id}              - Obter perfil específico
 GET    /api/profiles/server/{serverId} - Listar perfis de servidor
 PUT    /api/profiles/{id}              - Atualizar perfil
 DELETE /api/profiles/{id}              - Deletar perfil
+POST   /api/profiles/sync/server/{serverId} - Sincronizar perfis do Mikrotik
 ```
 
 ### Usuários PPPoE
