@@ -1,32 +1,55 @@
-# 🚀✨ API REST completa para gerenciamento de servidores MikroTik com PPPoE em produção! ✨
+# 🚀✨ API REST Completa para Gerenciamento de Provedores de Internet (ISP) ✨
 
-## 🚀🌐 Sobre o Projeto
+## 🌐 Sobre o Projeto
 
-Gerenciar usuários PPPoE, perfis de banda e conexões em servidores MikroTik pode ser um processo manual, repetitivo e propenso a erros - especialmente quando você tem múltiplos servidores e centenas de clientes. **Este projeto nasceu para resolver esse problema!**
+**De gerenciador de PPPoE para ERP completo de ISP!**
 
-Esta API REST robusta e escalável permite que provedores de internet (ISPs), administradores de rede e equipes de TI automatizem completamente o gerenciamento de servidores MikroTik, desde a criação de usuários e perfis até o monitoramento de conexões ativas em tempo real. Tudo isso com segurança, auditoria completa e uma interface Swagger para facilitar o uso.
+Este projeto começou como uma solução para automatizar o gerenciamento de servidores MikroTik e evoluiu para um **sistema completo de gestão de provedores de internet**, integrando camadas técnica, comercial e financeira em uma única plataforma escalável.
+
+### 🎯 Visão Atual
+
+Esta API REST robusta permite que provedores de internet (ISPs) automatizem completamente suas operações:
+- 🔧 **Camada Técnica**: Gestão de servidores MikroTik, perfis PPPoE, usuários e conexões
+- 👥 **Camada CRM**: Gestão de clientes (PF/PJ), endereços e geolocalização
+- 💼 **Camada Comercial**: Planos comerciais, contratos e lifecycle management
+- 💰 **Camada Financeira**: Faturas automáticas, pagamentos e integração com gateways
+- 🤖 **Automação**: Régua de cobrança, bloqueios automáticos e notificações
+
+### 📊 Status do Projeto
+
+- ✅ **Fase 1 (Concluída)**: PPPoE Management System
+- 🔨 **Fase 2 (Planejada)**: Multi-tenant + CRM
+- 🟡 **Fases 3-5 (Roadmap)**: Comercial + Financeiro + Automação
+
+📖 **Veja o roadmap completo**: [documentation/ROADMAP.md](documentation/ROADMAP.md)
 
 ## 🚀 Funcionalidades Principais
 
-✅ **Autenticação JWT Segura**: Login com tokens JWT e controle de acesso baseado em roles (ADMIN, OPERATOR, VIEWER).
-<br>
-✅ **Gerenciamento Multi-Servidor**: Configure e gerencie múltiplos servidores MikroTik a partir de uma única API.
-<br>
-✅ **Perfis PPPoE Personalizados**: Crie perfis com limites de banda (download/upload), timeouts e configurações específicas.
-<br>
-✅ **Gestão Completa de Usuários**: Crie, edite, ative, desative e delete usuários PPPoE diretamente no MikroTik via SSH.
-<br>
-✅ **Sincronização de Usuários**: Importe automaticamente todos os usuários PPPoE já existentes no MikroTik para o banco de dados.
-<br>
-✅ **Sincronização de Perfis**: Importe automaticamente todos os perfis PPPoE já existentes no MikroTik para o banco de dados.
-<br>
-✅ **Monitoramento de Conexões**: Visualize conexões ativas, estatísticas de tráfego e histórico de sessões.
-<br>
-✅ **Auditoria Completa**: Registro automático de todas as operações para rastreabilidade e compliance.
-<br>
-✅ **Documentação Interativa**: Swagger UI integrado para testar endpoints sem escrever código.
-<br>
+### ✅ Fase 1: PPPoE Management (Implementado)
+
+✅ **Autenticação JWT Segura**: Login com tokens JWT e controle de acesso baseado em roles (ADMIN, OPERATOR, VIEWER).  
+✅ **Gerenciamento Multi-Servidor**: Configure e gerencie múltiplos servidores MikroTik a partir de uma única API.  
+✅ **Perfis PPPoE Personalizados**: Crie perfis com limites de banda (download/upload), timeouts e configurações específicas.  
+✅ **Gestão Completa de Usuários**: Crie, edite, ative, desative e delete usuários PPPoE diretamente no MikroTik via SSH.  
+✅ **Sincronização de Usuários**: Importe automaticamente todos os usuários PPPoE já existentes no MikroTik para o banco de dados.  
+✅ **Sincronização de Perfis**: Importe automaticamente todos os perfis PPPoE já existentes no MikroTik para o banco de dados.  
+✅ **Monitoramento de Conexões**: Visualize conexões ativas, estatísticas de tráfego e histórico de sessões.  
+✅ **Auditoria Completa**: Registro automático de todas as operações para rastreabilidade e compliance.  
+✅ **Documentação Interativa**: Swagger UI integrado para testar endpoints sem escrever código.  
 ✅ **Processamento Eficiente**: Paginação, filtros e otimizações para lidar com grandes volumes de dados.
+
+### 🔨 Fase 2-5: ISP Management (Planejado)
+
+🔨 **Multi-tenant**: Suporte a múltiplas empresas na mesma infraestrutura  
+🔨 **CRM Completo**: Gestão de clientes (PF/PJ), documentos, endereços com geolocalização  
+🔨 **Planos Comerciais**: Separação entre perfis técnicos e planos de venda  
+🔨 **Contratos**: Gestão de lifecycle (DRAFT → ACTIVE → SUSPENDED → CANCELED)  
+🔨 **Financeiro**: Faturas automáticas, cálculo de juros/multa, integração com gateways (Asaas/Juno)  
+🔨 **Régua de Cobrança**: Automação completa (lembretes, redução de velocidade, bloqueios)  
+🔨 **Notificações**: E-mail e SMS automáticos (SendGrid, Twilio)  
+🔨 **Dashboards**: Métricas financeiras, técnicas e operacionais  
+
+📖 **Documentação completa**: [documentation/ISP_EXPANSION_PLAN.md](documentation/ISP_EXPANSION_PLAN.md)
 
 ## 🚀 Instalando
 
