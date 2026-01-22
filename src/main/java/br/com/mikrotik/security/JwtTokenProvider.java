@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
@@ -47,6 +48,27 @@ public class JwtTokenProvider {
                 .compact();
     }
 
+    /**
+     * Gera token JWT com companyId (para suporte multi-tenant)
+     */
+    public String generateTokenWithCompany(String username, String role, Long companyId) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + jwtExpirationMs);
+
+        Claims claims = Jwts.claims().setSubject(username);
+        claims.put("role", role);
+        if (companyId != null) {
+            claims.put("companyId", companyId);
+        }
+
+        return Jwts.builder()
+                .setClaims(claims)
+                .setIssuedAt(now)
+                .setExpiration(expiryDate)
+                .signWith(Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8)), SignatureAlgorithm.HS512)
+                .compact();
+    }
+
     public String getUsernameFromToken(String token) {
         Claims claims = Jwts.parserBuilder()
                 .setSigningKey(Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8)))
@@ -55,6 +77,43 @@ public class JwtTokenProvider {
                 .getBody();
 
         return claims.getSubject();
+    }
+
+    /**
+     * Extrai o companyId do token JWT (suporte multi-tenant)
+     * Retorna null se não houver companyId (backward compatibility)
+     */
+    public Long getCompanyId(String token) {
+        try {
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8)))
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+
+            Object companyIdObj = claims.get("companyId");
+            if (companyIdObj == null) {
+                return null; // Backward compatibility
+            }
+            if (companyIdObj instanceof Integer) {
+                return ((Integer) companyIdObj).longValue();
+            }
+            return (Long) companyIdObj;
+        } catch (Exception e) {
+            log.warn("Erro ao extrair companyId do token: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Resolve o token do header Authorization
+     */
+    public String resolveToken(HttpServletRequest request) {
+        String bearerToken = request.getHeader("Authorization");
+        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+            return bearerToken.substring(7);
+        }
+        return null;
     }
 
     public boolean validateToken(String token) {
