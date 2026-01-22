@@ -1,5 +1,6 @@
 package br.com.mikrotik.config;
 
+import br.com.mikrotik.security.CompanyContextFilter;
 import br.com.mikrotik.security.JwtAuthenticationFilter;
 import br.com.mikrotik.security.JwtTokenProvider;
 import br.com.mikrotik.service.CustomUserDetailsService;
@@ -28,6 +29,7 @@ public class SecurityConfig {
     private final CustomUserDetailsService customUserDetailsService;
     private final JwtTokenProvider tokenProvider;
     private final CorsConfigurationSource corsConfigurationSource;
+    private final CompanyContextFilter companyContextFilter;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -69,6 +71,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/mikrotik-status/**").hasAnyRole("ADMIN", "OPERATOR")
                         .anyRequest().authenticated()
                 )
+                // Multi-tenant: CompanyContextFilter ANTES do JwtAuthenticationFilter
+                .addFilterBefore(companyContextFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
