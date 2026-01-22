@@ -16,6 +16,11 @@ public class ApiUser {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // Multi-tenant support - NULLABLE for backward compatibility
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "company_id")
+    private Company company;
+
     @Column(nullable = false, unique = true)
     private String username;
 
