@@ -2,6 +2,8 @@ package br.com.mikrotik.controller;
 
 import br.com.mikrotik.dto.LoginDTO;
 import br.com.mikrotik.dto.LoginResponseDTO;
+import br.com.mikrotik.model.ApiUser;
+import br.com.mikrotik.repository.ApiUserRepository;
 import br.com.mikrotik.security.JwtTokenProvider;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -24,6 +26,7 @@ public class AuthController {
 
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider tokenProvider;
+    private final ApiUserRepository apiUserRepository;
 
     @PostMapping("/login")
     @Operation(summary = "Realizar login", description = "Autenticar usuário e obter JWT token")
@@ -35,8 +38,20 @@ public class AuthController {
                 )
         );
 
-        String token = tokenProvider.generateToken(authentication);
-        log.info("Usuário {} autenticado com sucesso", loginDTO.getUsername());
+        // Buscar usuário para obter companyId e role
+        ApiUser user = apiUserRepository.findByUsername(loginDTO.getUsername())
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+
+        // Gerar token com companyId (multi-tenant)
+        Long companyId = user.getCompany() != null ? user.getCompany().getId() : null;
+        String token = tokenProvider.generateTokenWithCompany(
+                user.getUsername(),
+                user.getRole(),
+                companyId
+        );
+
+        log.info("Usuário {} autenticado com sucesso (company: {})",
+                loginDTO.getUsername(), companyId);
 
         return ResponseEntity.ok(new LoginResponseDTO(
                 token,
