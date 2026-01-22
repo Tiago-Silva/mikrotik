@@ -16,7 +16,12 @@ public class MikrotikServer {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    // Multi-tenant support - NULLABLE for backward compatibility
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "company_id")
+    private Company company;
+
+    @Column(nullable = false)
     private String name;
 
     @Column(nullable = false)
@@ -37,9 +42,18 @@ public class MikrotikServer {
     @Column(nullable = false)
     private Boolean active = true;
 
+    private LocalDateTime lastSyncAt;
+
+    @Enumerated(EnumType.STRING)
+    private SyncStatus syncStatus;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
     @Column(nullable = false)
     private LocalDateTime updatedAt = LocalDateTime.now();
+
+    public enum SyncStatus {
+        OK, ERROR, UNREACHABLE
+    }
 }
