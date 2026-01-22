@@ -2,10 +2,15 @@ package br.com.mikrotik.service;
 
 import br.com.mikrotik.dto.MikrotikServerDTO;
 import br.com.mikrotik.exception.ResourceNotFoundException;
+import br.com.mikrotik.model.Company;
 import br.com.mikrotik.model.MikrotikServer;
+import br.com.mikrotik.repository.CompanyRepository;
 import br.com.mikrotik.repository.MikrotikServerRepository;
+import br.com.mikrotik.util.CompanyContextHolder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +24,7 @@ public class MikrotikServerService {
 
     private final MikrotikServerRepository repository;
     private final MikrotikSshService sshService;
+    private final CompanyRepository companyRepository;
 
     @Transactional
     public MikrotikServerDTO create(MikrotikServerDTO dto) {
@@ -36,6 +42,15 @@ public class MikrotikServerService {
         server.setCreatedAt(LocalDateTime.now());
         server.setUpdatedAt(LocalDateTime.now());
 
+        // Multi-tenant: Associar à company do contexto (se disponível)
+        Long companyId = CompanyContextHolder.getCompanyId();
+        if (companyId != null) {
+            Company company = companyRepository.findById(companyId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Empresa não encontrada: " + companyId));
+            server.setCompany(company);
+            log.info("Servidor associado à empresa: {}", companyId);
+        }
+
         MikrotikServer saved = repository.save(server);
         log.info("Servidor Mikrotik criado: {}", saved.getId());
         return mapToDTO(saved);
@@ -51,6 +66,26 @@ public class MikrotikServerService {
         return repository.findAll().stream()
                 .map(this::mapToDTO)
                 .toList();
+    }
+
+    /**
+     * Lista servidores filtrados por empresa (multi-tenant)
+     */
+    @Transactional(readOnly = true)
+    public Page<MikrotikServerDTO> findByCompanyId(Long companyId, Pageable pageable) {
+        log.info("Buscando servidores da empresa: {}", companyId);
+        return repository.findByCompanyId(companyId, pageable)
+                .map(this::mapToDTO);
+    }
+
+    /**
+     * Lista servidores ativos filtrados por empresa
+     */
+    @Transactional(readOnly = true)
+    public Page<MikrotikServerDTO> findByCompanyIdAndActive(Long companyId, Boolean active, Pageable pageable) {
+        log.info("Buscando servidores da empresa {} com active={}", companyId, active);
+        return repository.findByCompanyIdAndActive(companyId, active, pageable)
+                .map(this::mapToDTO);
     }
 
     @Transactional
