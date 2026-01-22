@@ -20,7 +20,7 @@
 | [application.properties](../src/main/resources/application.properties.txt) | Configurações da aplicação |
 | [.env.example](../.env.example) | Variáveis de ambiente (template) |
 | [docker-compose.yml](../docker-compose.yml) | Docker - Banco de dados e PHPMyAdmin |
-| [schema.sql](../schema.sql) | SQL - Estrutura do banco de dados |
+| [schema.sql](schema.sql) | SQL - Estrutura do banco de dados |
 
 ## 🧪 Testes e Exemplos
 
