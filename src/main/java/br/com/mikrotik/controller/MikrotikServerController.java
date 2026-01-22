@@ -7,6 +7,10 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -46,6 +50,31 @@ public class MikrotikServerController {
     @Operation(summary = "Listar todos os servidores", description = "Retorna lista de todos os servidores Mikrotik")
     public ResponseEntity<List<MikrotikServerDTO>> getAll() {
         return ResponseEntity.ok(service.getAll());
+    }
+
+    // Novos endpoints multi-tenant
+
+    @GetMapping("/company/{companyId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @Operation(summary = "Listar servidores por empresa", description = "Retorna servidores Mikrotik de uma empresa específica (paginado)")
+    public ResponseEntity<Page<MikrotikServerDTO>> findByCompanyId(
+            @PathVariable Long companyId,
+            @PageableDefault(size = 20, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
+        log.info("GET /api/mikrotik-servers/company/{} - Listando servidores", companyId);
+        Page<MikrotikServerDTO> servers = service.findByCompanyId(companyId, pageable);
+        return ResponseEntity.ok(servers);
+    }
+
+    @GetMapping("/company/{companyId}/active")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @Operation(summary = "Listar servidores ativos por empresa", description = "Retorna apenas servidores ativos de uma empresa")
+    public ResponseEntity<Page<MikrotikServerDTO>> findByCompanyIdAndActive(
+            @PathVariable Long companyId,
+            @RequestParam(defaultValue = "true") Boolean active,
+            @PageableDefault(size = 20, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
+        log.info("GET /api/mikrotik-servers/company/{}/active?active={}", companyId, active);
+        Page<MikrotikServerDTO> servers = service.findByCompanyIdAndActive(companyId, active, pageable);
+        return ResponseEntity.ok(servers);
     }
 
     @PutMapping("/{id}")
