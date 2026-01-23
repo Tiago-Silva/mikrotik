@@ -23,6 +23,58 @@ Esta API REST robusta permite que provedores de internet (ISPs) automatizem comp
 
 📖 **Veja o roadmap completo**: [documentation/ROADMAP.md](documentation/ROADMAP.md)
 
+## ⭐ Como Colaborar com o Projeto
+
+> 🎉 **Obrigado pelas 53 clones!** Agora queremos que você faça parte da comunidade!
+
+Este projeto é **open source** e sua contribuição é muito bem-vinda! Mas antes de clonar, considere fazer um **FORK** do repositório:
+
+### 🍴 Por que fazer Fork?
+
+1. **🔔 Receba atualizações**: Você será notificado sobre novas features e correções
+2. **🤝 Contribua facilmente**: Faça suas melhorias e envie Pull Requests
+3. **📊 Mostre seu interesse**: Ajuda o projeto a crescer e ganhar visibilidade
+4. **💡 Personalize**: Mantenha suas customizações sincronizadas com a versão oficial
+
+### 📝 Como Fazer Fork e Contribuir
+
+```bash
+# 1. Clique no botão "Fork" no topo desta página (GitHub)
+
+# 2. Clone SEU fork (não o repositório original)
+git clone https://github.com/SEU-USUARIO/mikrotik.git
+cd mikrotik
+
+# 3. Adicione o repositório original como remote
+git remote add upstream https://github.com/USUARIO-ORIGINAL/mikrotik.git
+
+# 4. Crie uma branch para sua feature
+git checkout -b minha-contribuicao
+
+# 5. Faça suas alterações e commit
+git add .
+git commit -m "feat: minha contribuição incrível"
+
+# 6. Envie para SEU fork
+git push origin minha-contribuicao
+
+# 7. Abra um Pull Request no GitHub!
+```
+
+### 🎯 Formas de Contribuir
+
+- 🐛 **Reportar bugs**: Abra uma [issue](https://github.com/seu-usuario/mikrotik/issues)
+- 💡 **Sugerir features**: Compartilhe suas ideias conosco
+- 📝 **Melhorar documentação**: Corrija erros ou adicione exemplos
+- 🔧 **Enviar código**: Implemente features do roadmap ou corrija bugs
+- ⭐ **Dar estrela**: Isso nos motiva muito!
+
+### 🏆 Seja Reconhecido!
+
+Todos os contribuidores serão creditados no projeto. Junte-se a nós! 💪
+
+---
+
 ## 🚀 Funcionalidades Principais
 
 ### ✅ Fase 1: PPPoE Management (Implementado)
