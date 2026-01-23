@@ -2,6 +2,7 @@ package br.com.mikrotik.controller;
 
 import br.com.mikrotik.dto.LoginDTO;
 import br.com.mikrotik.dto.LoginResponseDTO;
+import br.com.mikrotik.dto.UserInfoDTO;
 import br.com.mikrotik.model.ApiUser;
 import br.com.mikrotik.repository.ApiUserRepository;
 import br.com.mikrotik.security.JwtTokenProvider;
@@ -50,15 +51,54 @@ public class AuthController {
                 companyId
         );
 
+        // Criar DTO com informações do usuário
+        UserInfoDTO userInfo = UserInfoDTO.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .role(user.getRole())
+                .companyId(companyId)
+                .companyName(user.getCompany() != null ? user.getCompany().getName() : null)
+                .active(user.getActive())
+                .build();
+
         log.info("Usuário {} autenticado com sucesso (company: {})",
                 loginDTO.getUsername(), companyId);
 
-        return ResponseEntity.ok(new LoginResponseDTO(
+        LoginResponseDTO response = new LoginResponseDTO(
                 token,
                 "Bearer",
                 tokenProvider.getExpirationTime(),
                 loginDTO.getUsername()
-        ));
+        );
+        response.setUser(userInfo);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/me")
+    @Operation(summary = "Obter informações do usuário autenticado",
+               description = "Retorna informações do usuário logado baseado no token JWT")
+    public ResponseEntity<UserInfoDTO> getCurrentUser(@RequestHeader("Authorization") String authHeader) {
+        String token = authHeader.replace("Bearer ", "");
+        String username = tokenProvider.getUsernameFromToken(token);
+
+        ApiUser user = apiUserRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+
+        Long companyId = user.getCompany() != null ? user.getCompany().getId() : null;
+
+        UserInfoDTO userInfo = UserInfoDTO.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .role(user.getRole())
+                .companyId(companyId)
+                .companyName(user.getCompany() != null ? user.getCompany().getName() : null)
+                .active(user.getActive())
+                .build();
+
+        return ResponseEntity.ok(userInfo);
     }
 
     @GetMapping("/validate")
