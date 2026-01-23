@@ -92,7 +92,7 @@ Todos os contribuidores serão creditados no projeto. Junte-se a nós! 💪
 ✅ **Documentação Interativa**: Swagger UI integrado para testar endpoints sem escrever código.  
 ✅ **Processamento Eficiente**: Paginação, filtros e otimizações para lidar com grandes volumes de dados.
 
-### 🔨 Fase 2-5: ISP Management (Planejado)
+### 🔨 Fase 2-5: ISP Management (Em revisão)
 
 🔨 **Multi-tenant**: Suporte a múltiplas empresas na mesma infraestrutura  
 🔨 **CRM Completo**: Gestão de clientes (PF/PJ), documentos, endereços com geolocalização  
@@ -119,7 +119,7 @@ Antes de começar, certifique-se de ter instalado:
 ### 1️⃣ Clone o Projeto
 
 ```bash
-git clone https://github.com/seu-usuario/mikrotik.git
+git clone https://github.com/Tiago-Silva/mikrotik.git
 cd mikrotik
 ```
 
