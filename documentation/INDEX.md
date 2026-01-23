@@ -9,6 +9,9 @@
 | [DEVELOPMENT.md](DEVELOPMENT.md) | 🛠️ Guia de desenvolvimento e padrões |
 | [SYNC_USERS.md](SYNC_USERS.md) | 🔄 Guia de sincronização de usuários PPPoE do Mikrotik |
 | [SYNC_PROFILES.md](SYNC_PROFILES.md) | 🔄 Guia de sincronização de perfis PPPoE do Mikrotik |
+| [CUSTOMER_IMPLEMENTATION.md](CUSTOMER_IMPLEMENTATION.md) | 👥 Implementação do módulo de Clientes (CRM) |
+| [ENDPOINT_FLOW.md](ENDPOINT_FLOW.md) | 📡 Fluxo completo de endpoints para frontend |
+| [ROADMAP.md](ROADMAP.md) | 🗺️ Roadmap de desenvolvimento completo |
 | [SUMMARY.md](SUMMARY.md) | 📊 Sumário executivo do projeto |
 | [INDEX.md](INDEX.md) | 📚 Este arquivo |
 
@@ -35,6 +38,8 @@
 ```
 src/main/java/br/com/mikrotik/controller/
 ├── AuthController.java                 # Login e autenticação
+├── CompanyController.java              # CRUD de empresas (multi-tenant)
+├── CustomerController.java             # CRUD de clientes (CRM)
 ├── MikrotikServerController.java       # CRUD de servidores
 ├── PppoeProfileController.java         # CRUD de perfis
 ├── PppoeUserController.java            # CRUD de usuários
@@ -44,10 +49,13 @@ src/main/java/br/com/mikrotik/controller/
 ### Services (lógica de negócio)
 ```
 src/main/java/br/com/mikrotik/service/
+├── CompanyService.java                 # Lógica de empresas
+├── CustomerService.java                # Lógica de clientes (CRM)
 ├── MikrotikServerService.java          # Lógica de servidores
+├── MikrotikSshService.java             # Comunicação SSH com Mikrotik
 ├── PppoeProfileService.java            # Lógica de perfis
 ├── PppoeUserService.java               # Lógica de usuários
-├── PppoeConnectionService.java         # Lógica de conexões
+└── PppoeConnectionService.java         # Lógica de conexões
 ├── MikrotikSshService.java             # Integração SSH com Mikrotik
 └── CustomUserDetailsService.java       # Autenticação customizada
 ```
