@@ -1,18 +1,21 @@
 # 📚 Índice de Recursos - Mikrotik PPPoE Management API
 
+> **💡 NOVO:** Para uma navegação completa e organizada por perfil, veja **[DOCS_INDEX.md](DOCS_INDEX.md)**
+
 ## 📖 Documentação
 
 | Arquivo | Descrição |
 |---------|-----------|
+| [DOCS_INDEX.md](DOCS_INDEX.md) | 🆕 **Índice master com trilhas por perfil** |
+| [README.md](README.md) | 📚 **Porta de entrada da documentação** |
 | [API_README.md](API_README.md) | 📘 Documentação completa da API com exemplos de uso |
 | [QUICK_START.md](QUICK_START.md) | ⚡ Guia de início rápido (5 minutos) |
 | [DEVELOPMENT.md](DEVELOPMENT.md) | 🛠️ Guia de desenvolvimento e padrões |
 | [SYNC_USERS.md](SYNC_USERS.md) | 🔄 Guia de sincronização de usuários PPPoE do Mikrotik |
 | [SYNC_PROFILES.md](SYNC_PROFILES.md) | 🔄 Guia de sincronização de perfis PPPoE do Mikrotik |
-| [CUSTOMER_IMPLEMENTATION.md](CUSTOMER_IMPLEMENTATION.md) | 👥 Implementação do módulo de Clientes (CRM) |
-| [ENDPOINT_FLOW.md](ENDPOINT_FLOW.md) | 📡 Fluxo completo de endpoints para frontend |
 | [ROADMAP.md](ROADMAP.md) | 🗺️ Roadmap de desenvolvimento completo |
 | [SUMMARY.md](SUMMARY.md) | 📊 Sumário executivo do projeto |
+| [LINKEDIN_POST.md](LINKEDIN_POST.md) | 💼 Posts para LinkedIn (4 versões) |
 | [INDEX.md](INDEX.md) | 📚 Este arquivo |
 
 ## 🔧 Configuração e Instalação

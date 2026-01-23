@@ -41,7 +41,7 @@ Esta API evoluiu de um **gerenciador de PPPoE** para um **sistema completo de ge
 - **[README_PTBR.md](README_PTBR.md)** - Documentação em Português
 
 ### 📢 Marketing
-- **[LINKEDIN_POST.md](LINKEDIN_POST.md)** - 🆕 **Textos para LinkedIn (4 versões)**
+- **[LINKEDIN_POST.md](STRUCTURE.md)** - 🆕 **Textos para LinkedIn (4 versões)**
 
 ---
 
@@ -70,7 +70,7 @@ Esta API evoluiu de um **gerenciador de PPPoE** para um **sistema completo de ge
 ### 📊 Marketing / Vendas
 1. [README.md](../README.md) → Benefícios
 2. [ISP_EXPANSION_PLAN.md](ISP_EXPANSION_PLAN.md) → 🆕 Solução completa
-3. [LINKEDIN_POST.md](LINKEDIN_POST.md) → 🆕 Textos prontos
+3. [LINKEDIN_POST.md](STRUCTURE.md) → 🆕 Textos prontos
 4. [MANIFEST.md](MANIFEST.md) → Propósito
 
 ---
