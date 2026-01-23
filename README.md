@@ -18,8 +18,10 @@ Esta API REST robusta permite que provedores de internet (ISPs) automatizem comp
 ### 📊 Status do Projeto
 
 - ✅ **Fase 1 (Concluída)**: PPPoE Management System
-- 🔨 **Fase 2 (Planejada)**: Multi-tenant + CRM
-- 🟡 **Fases 3-5 (Roadmap)**: Comercial + Financeiro + Automação
+- 🔍 **Fase 2 (Em revisão)**: Multi-tenant + CRM - *Código implementado, em processo de revisão*
+- 🔍 **Fases 3-5 (Em revisão)**: Comercial + Financeiro + Automação - *Código implementado, em processo de revisão*
+
+> 💡 **Nota:** As fases 2-5 estão com código implementado e funcional, mas passando por processo de code review, refatoração e otimização antes da versão final.
 
 📖 **Veja o roadmap completo**: [documentation/ROADMAP.md](documentation/ROADMAP.md)
 
