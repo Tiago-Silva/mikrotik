@@ -244,17 +244,15 @@ public class ContractService {
     }
 
     /**
-     * Buscar contratos para faturamento (por dia de cobrança)
+     * Buscar contratos para faturamento (por dia de cobrança) - paginado
      */
     @Transactional(readOnly = true)
-    public List<ContractDTO> findContractsForBilling(Integer billingDay) {
+    public Page<ContractDTO> findContractsForBilling(Integer billingDay, Pageable pageable) {
         log.info("Buscando contratos para faturamento - dia: {}", billingDay);
 
         Long companyId = CompanyContextHolder.getCompanyId();
-        List<Contract> contracts = contractRepository.findContractsForBilling(companyId, billingDay);
-        return contracts.stream()
-                .map(ContractDTO::fromEntity)
-                .collect(Collectors.toList());
+        Page<Contract> contracts = contractRepository.findContractsForBilling(companyId, billingDay, pageable);
+        return contracts.map(ContractDTO::fromEntity);
     }
 
     /**
