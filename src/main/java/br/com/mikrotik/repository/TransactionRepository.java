@@ -9,13 +9,9 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
-
-    // Buscar por fatura
-    List<Transaction> findByInvoiceId(Long invoiceId);
 
     // Buscar por fatura (paginado)
     Page<Transaction> findByInvoiceId(Long invoiceId, Pageable pageable);
@@ -23,13 +19,11 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     // Buscar por método de pagamento
     Page<Transaction> findByMethod(Transaction.PaymentMethod method, Pageable pageable);
 
-    // Buscar por período
+    // Buscar por período (paginado)
     @Query("SELECT t FROM Transaction t WHERE t.paidAt BETWEEN :startDate AND :endDate")
-    List<Transaction> findByPeriod(@Param("startDate") LocalDateTime startDate,
-                                   @Param("endDate") LocalDateTime endDate);
-
-    // Buscar por código de transação
-    List<Transaction> findByTransactionCode(String transactionCode);
+    Page<Transaction> findByPeriod(@Param("startDate") LocalDateTime startDate,
+                                   @Param("endDate") LocalDateTime endDate,
+                                   Pageable pageable);
 
     // Buscar com filtros múltiplos
     @Query("SELECT t FROM Transaction t WHERE " +
