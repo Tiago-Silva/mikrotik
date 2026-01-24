@@ -18,6 +18,15 @@
 | [LINKEDIN_POST.md](LINKEDIN_POST.md) | 💼 Posts para LinkedIn (4 versões) |
 | [INDEX.md](INDEX.md) | 📚 Este arquivo |
 
+## 📄 Paginação
+
+| Arquivo | Descrição |
+|---------|-----------|
+| [PAGINACAO_STATUS.md](../PAGINACAO_STATUS.md) | ✅ Status completo da implementação de paginação |
+| [PAGINACAO_FRONTEND_GUIDE.md](../PAGINACAO_FRONTEND_GUIDE.md) | 🎯 Guia prático para frontend consumir paginação |
+| [PAGINACAO_SUMMARY.md](../PAGINACAO_SUMMARY.md) | 📊 Resumo executivo da paginação |
+| [PAGINACAO_CHECKLIST.md](../PAGINACAO_CHECKLIST.md) | ✅ Checklist de validação completo |
+
 ## 🔧 Configuração e Instalação
 
 | Arquivo | Descrição |
