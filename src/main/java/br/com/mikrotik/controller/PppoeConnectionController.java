@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -41,16 +43,19 @@ public class PppoeConnectionController {
 
     @GetMapping("/user/{userId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
-    @Operation(summary = "Listar conexões de um usuário", description = "Retorna todas as conexões ativas de um usuário")
-    public ResponseEntity<List<PppoeConnectionDTO>> getByUser(@PathVariable Long userId) {
-        return ResponseEntity.ok(service.getByUser(userId));
+    @Operation(summary = "Listar conexões de um usuário", description = "Retorna conexões paginadas de um usuário")
+    public ResponseEntity<Page<PppoeConnectionDTO>> getByUser(
+            @PathVariable Long userId,
+            @PageableDefault(size = 20, sort = "connectedAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(service.getByUser(userId, pageable));
     }
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
-    @Operation(summary = "Listar todas as conexões", description = "Retorna lista de todas as conexões ativas")
-    public ResponseEntity<List<PppoeConnectionDTO>> getAll() {
-        return ResponseEntity.ok(service.getAll());
+    @Operation(summary = "Listar todas as conexões", description = "Retorna lista paginada de todas as conexões")
+    public ResponseEntity<Page<PppoeConnectionDTO>> getAll(
+            @PageableDefault(size = 20, sort = "connectedAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(service.getAll(pageable));
     }
 
     @GetMapping("/active/count")
@@ -62,8 +67,10 @@ public class PppoeConnectionController {
 
     @GetMapping("/server/{serverId}/active")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
-    @Operation(summary = "Listar conexões ativas de um servidor", description = "Retorna apenas as conexões ativas de um servidor")
-    public ResponseEntity<List<PppoeConnectionDTO>> getActiveByServer(@PathVariable Long serverId) {
-        return ResponseEntity.ok(service.getActiveByServer(serverId));
+    @Operation(summary = "Listar conexões ativas de um servidor", description = "Retorna conexões ativas paginadas de um servidor")
+    public ResponseEntity<Page<PppoeConnectionDTO>> getActiveByServer(
+            @PathVariable Long serverId,
+            @PageableDefault(size = 20, sort = "connectedAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(service.getActiveByServer(serverId, pageable));
     }
 }
