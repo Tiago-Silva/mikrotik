@@ -162,10 +162,12 @@ public class ContractController {
 
     @GetMapping("/billing/{billingDay}")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
-    @Operation(summary = "Buscar contratos para faturamento", description = "Retorna contratos ativos para faturamento no dia específico")
-    public ResponseEntity<List<ContractDTO>> findContractsForBilling(@PathVariable Integer billingDay) {
+    @Operation(summary = "Buscar contratos para faturamento", description = "Retorna contratos ativos para faturamento no dia específico (paginado)")
+    public ResponseEntity<Page<ContractDTO>> findContractsForBilling(
+            @PathVariable Integer billingDay,
+            @PageableDefault(size = 100, sort = "id") Pageable pageable) {
         log.info("GET /api/contracts/billing/{} - Buscando contratos para faturamento", billingDay);
-        List<ContractDTO> contracts = contractService.findContractsForBilling(billingDay);
+        Page<ContractDTO> contracts = contractService.findContractsForBilling(billingDay, pageable);
         return ResponseEntity.ok(contracts);
     }
 
