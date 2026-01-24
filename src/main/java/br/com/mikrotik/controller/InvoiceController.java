@@ -84,10 +84,11 @@ public class InvoiceController {
 
     @GetMapping("/overdue")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
-    @Operation(summary = "Listar faturas vencidas", description = "Retorna todas as faturas vencidas e não pagas")
-    public ResponseEntity<List<InvoiceDTO>> findOverdue() {
+    @Operation(summary = "Listar faturas vencidas", description = "Retorna todas as faturas vencidas e não pagas (paginado)")
+    public ResponseEntity<Page<InvoiceDTO>> findOverdue(
+            @PageableDefault(size = 50, sort = "dueDate") Pageable pageable) {
         log.info("GET /api/invoices/overdue - Listando faturas vencidas");
-        List<InvoiceDTO> invoices = invoiceService.findOverdue();
+        Page<InvoiceDTO> invoices = invoiceService.findOverdue(pageable);
         return ResponseEntity.ok(invoices);
     }
 
