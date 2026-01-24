@@ -52,10 +52,12 @@ public class TransactionController {
 
     @GetMapping("/invoice/{invoiceId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
-    @Operation(summary = "Listar transações por fatura", description = "Lista todas as transações de uma fatura")
-    public ResponseEntity<List<TransactionDTO>> findByInvoice(@PathVariable Long invoiceId) {
+    @Operation(summary = "Listar transações por fatura", description = "Lista todas as transações de uma fatura (paginado)")
+    public ResponseEntity<Page<TransactionDTO>> findByInvoice(
+            @PathVariable Long invoiceId,
+            @PageableDefault(size = 20, sort = "paidAt", direction = Sort.Direction.DESC) Pageable pageable) {
         log.info("GET /api/transactions/invoice/{} - Listando transações", invoiceId);
-        List<TransactionDTO> transactions = transactionService.findByInvoice(invoiceId);
+        Page<TransactionDTO> transactions = transactionService.findByInvoice(invoiceId, pageable);
         return ResponseEntity.ok(transactions);
     }
 
@@ -72,12 +74,13 @@ public class TransactionController {
 
     @GetMapping("/period")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
-    @Operation(summary = "Listar por período", description = "Lista transações em um período específico")
-    public ResponseEntity<List<TransactionDTO>> findByPeriod(
+    @Operation(summary = "Listar por período", description = "Lista transações em um período específico (paginado)")
+    public ResponseEntity<Page<TransactionDTO>> findByPeriod(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
+            @PageableDefault(size = 50, sort = "paidAt", direction = Sort.Direction.DESC) Pageable pageable) {
         log.info("GET /api/transactions/period?startDate={}&endDate={}", startDate, endDate);
-        List<TransactionDTO> transactions = transactionService.findByPeriod(startDate, endDate);
+        Page<TransactionDTO> transactions = transactionService.findByPeriod(startDate, endDate, pageable);
         return ResponseEntity.ok(transactions);
     }
 
