@@ -72,19 +72,23 @@ public class IpPoolController {
 
     @GetMapping("/server/{serverId}/all")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
-    @Operation(summary = "Listar todos os pools", description = "Lista todos os pools de um servidor (sem paginação)")
-    public ResponseEntity<List<IpPoolDTO>> findAllByServer(@PathVariable Long serverId) {
+    @Operation(summary = "Listar todos os pools", description = "Lista todos os pools de um servidor (paginado)")
+    public ResponseEntity<Page<IpPoolDTO>> findAllByServer(
+            @PathVariable Long serverId,
+            @PageableDefault(size = 50, sort = "name") Pageable pageable) {
         log.info("GET /api/ip-pools/server/{}/all - Listando todos os pools", serverId);
-        List<IpPoolDTO> pools = ipPoolService.findAllByServer(serverId);
+        Page<IpPoolDTO> pools = ipPoolService.findAllByServer(serverId, pageable);
         return ResponseEntity.ok(pools);
     }
 
     @GetMapping("/server/{serverId}/active-list")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
-    @Operation(summary = "Listar pools ativos", description = "Lista apenas pools ativos de um servidor (sem paginação)")
-    public ResponseEntity<List<IpPoolDTO>> findActiveByServer(@PathVariable Long serverId) {
+    @Operation(summary = "Listar pools ativos", description = "Lista apenas pools ativos de um servidor (paginado)")
+    public ResponseEntity<Page<IpPoolDTO>> findActiveByServer(
+            @PathVariable Long serverId,
+            @PageableDefault(size = 50, sort = "name") Pageable pageable) {
         log.info("GET /api/ip-pools/server/{}/active-list - Listando pools ativos", serverId);
-        List<IpPoolDTO> pools = ipPoolService.findActiveByServer(serverId);
+        Page<IpPoolDTO> pools = ipPoolService.findActiveByServer(serverId, pageable);
         return ResponseEntity.ok(pools);
     }
 
