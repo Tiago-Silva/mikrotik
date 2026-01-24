@@ -82,10 +82,11 @@ public class PppoeCredentialController {
 
     @GetMapping("/unassigned")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
-    @Operation(summary = "Listar credenciais não vinculadas", description = "Lista credenciais sem contrato vinculado")
-    public ResponseEntity<List<PppoeCredentialDTO>> findUnassigned() {
+    @Operation(summary = "Listar credenciais não vinculadas", description = "Lista credenciais sem contrato vinculado (paginado)")
+    public ResponseEntity<Page<PppoeCredentialDTO>> findUnassigned(
+            @PageableDefault(size = 50, sort = "username") Pageable pageable) {
         log.info("GET /api/pppoe-credentials/unassigned - Listando credenciais não vinculadas");
-        List<PppoeCredentialDTO> credentials = pppoeCredentialService.findUnassigned();
+        Page<PppoeCredentialDTO> credentials = pppoeCredentialService.findUnassigned(pageable);
         return ResponseEntity.ok(credentials);
     }
 
