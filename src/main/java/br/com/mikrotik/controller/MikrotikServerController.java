@@ -47,9 +47,10 @@ public class MikrotikServerController {
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Listar todos os servidores", description = "Retorna lista de todos os servidores Mikrotik")
-    public ResponseEntity<List<MikrotikServerDTO>> getAll() {
-        return ResponseEntity.ok(service.getAll());
+    @Operation(summary = "Listar todos os servidores", description = "Retorna lista paginada de todos os servidores Mikrotik")
+    public ResponseEntity<Page<MikrotikServerDTO>> getAll(
+            @PageableDefault(size = 20, sort = "name") Pageable pageable) {
+        return ResponseEntity.ok(service.getAll(pageable));
     }
 
     // Novos endpoints multi-tenant
