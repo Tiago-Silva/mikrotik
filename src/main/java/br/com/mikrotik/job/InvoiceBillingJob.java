@@ -8,6 +8,8 @@ import br.com.mikrotik.service.InvoiceService;
 import br.com.mikrotik.util.CompanyContextHolder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -64,8 +66,10 @@ public class InvoiceBillingJob {
         try {
             int currentDay = LocalDate.now().getDayOfMonth();
 
-            // Buscar contratos ativos para faturamento
-            List<Contract> contracts = contractRepository.findContractsForBilling(companyId, currentDay);
+            // Buscar contratos ativos para faturamento (todos os registros)
+            Page<Contract> contractsPage = contractRepository.findContractsForBilling(
+                companyId, currentDay, Pageable.unpaged());
+            List<Contract> contracts = contractsPage.getContent();
 
             log.info("Encontrados {} contratos para faturamento na empresa {}", contracts.size(), companyId);
 
@@ -165,7 +169,9 @@ public class InvoiceBillingJob {
         CompanyContextHolder.setCompanyId(companyId);
 
         try {
-            List<InvoiceDTO> overdueInvoices = invoiceService.findOverdue();
+            // Buscar todas as faturas vencidas (sem paginação)
+            Page<InvoiceDTO> overdueInvoicesPage = invoiceService.findOverdue(Pageable.unpaged());
+            List<InvoiceDTO> overdueInvoices = overdueInvoicesPage.getContent();
 
             int count = 0;
             for (InvoiceDTO invoice : overdueInvoices) {
