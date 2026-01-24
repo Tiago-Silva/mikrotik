@@ -27,7 +27,7 @@ CREATE TABLE companies (
 -- Tabela de Usuários da API (com suporte multi-tenant)
 CREATE TABLE api_users (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    company_id BIGINT,
+    company_id BIGINT NOT NULL,  -- NOT NULL: todo usuário DEVE pertencer a uma empresa
     username VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL,
@@ -36,7 +36,7 @@ CREATE TABLE api_users (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     last_login DATETIME,
-    FOREIGN KEY (company_id) REFERENCES companies(id),
+    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE RESTRICT,
     INDEX idx_username (username),
     INDEX idx_email (email),
     INDEX idx_company_id (company_id)
@@ -362,21 +362,19 @@ CREATE TABLE audit_logs (
     INDEX idx_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Reabilitar verificação de foreign keys
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- ==========================================
 -- DADOS INICIAIS
 -- ==========================================
-
--- Inserir empresa padrão
-INSERT INTO companies (id, name, trade_name, cnpj, email, support_phone, active)
-VALUES (1, 'Empresa Padrão', 'ISP Default', '00.000.000/0001-00', 'admin@default.com', '(00) 0000-0000', true);
-
--- Inserir usuários padrão (senha: admin - hash BCrypt)
-INSERT INTO api_users (company_id, username, password, email, role, active) VALUES
-(1, 'admin', '$2a$10$SlVZrKU8T8zXzYVhfLN.gO.8.K9YPqKyHbPvvQx9K5LVo1k2B5hKe', 'admin@example.com', 'ADMIN', true),
-(1, 'operator', '$2a$10$SlVZrKU8T8zXzYVhfLN.gO.8.K9YPqKyHbPvvQx9K5LVo1k2B5hKe', 'operator@example.com', 'OPERATOR', true),
-(1, 'viewer', '$2a$10$SlVZrKU8T8zXzYVhfLN.gO.8.K9YPqKyHbPvvQx9K5LVo1k2B5hKe', 'viewer@example.com', 'VIEWER', true);
-
--- Mensagem de sucesso
-SELECT 'Migration V1 - Schema inicial com multi-tenant criado com sucesso!' AS status;
+-- Os dados iniciais (empresa e usuários) são criados pela classe:
+-- br.com.mikrotik.config.DataInitializationConfig
+--
+-- Isso garante que:
+-- 1. A empresa é criada ANTES dos usuários
+-- 2. Os usuários são corretamente vinculados à empresa
+-- 3. As senhas são criptografadas com BCrypt
+--
+-- Migration V1 - Schema com 18 tabelas criado com sucesso!
+-- ==========================================
