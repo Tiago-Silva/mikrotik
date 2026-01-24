@@ -94,31 +94,27 @@ public class ServicePlanService {
     }
 
     /**
-     * Listar todos os planos da empresa (sem paginação)
+     * Listar todos os planos da empresa (paginado)
      */
     @Transactional(readOnly = true)
-    public List<ServicePlanDTO> findAllByCompany() {
+    public Page<ServicePlanDTO> findAllByCompany(Pageable pageable) {
         log.info("Listando todos os planos da empresa");
 
         Long companyId = CompanyContextHolder.getCompanyId();
-        List<ServicePlan> plans = servicePlanRepository.findByCompanyId(companyId);
-        return plans.stream()
-                .map(ServicePlanDTO::fromEntity)
-                .collect(Collectors.toList());
+        Page<ServicePlan> plans = servicePlanRepository.findByCompanyId(companyId, pageable);
+        return plans.map(ServicePlanDTO::fromEntity);
     }
 
     /**
-     * Listar planos ativos da empresa (sem paginação)
+     * Listar planos ativos da empresa (paginado)
      */
     @Transactional(readOnly = true)
-    public List<ServicePlanDTO> findActiveByCompany() {
+    public Page<ServicePlanDTO> findActiveByCompany(Pageable pageable) {
         log.info("Listando planos ativos da empresa");
 
         Long companyId = CompanyContextHolder.getCompanyId();
-        List<ServicePlan> plans = servicePlanRepository.findByCompanyIdAndActive(companyId, true);
-        return plans.stream()
-                .map(ServicePlanDTO::fromEntity)
-                .collect(Collectors.toList());
+        Page<ServicePlan> plans = servicePlanRepository.findByCompanyIdAndActive(companyId, true, pageable);
+        return plans.map(ServicePlanDTO::fromEntity);
     }
 
     /**
