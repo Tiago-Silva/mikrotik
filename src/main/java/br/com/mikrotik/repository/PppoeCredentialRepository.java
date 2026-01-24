@@ -50,10 +50,10 @@ public interface PppoeCredentialRepository extends JpaRepository<PppoeCredential
     // Contar credenciais por servidor
     long countByMikrotikServerId(Long mikrotikServerId);
 
-    // Buscar credenciais não vinculadas a contrato
+    // Buscar credenciais não vinculadas a contrato (paginado)
     @Query("SELECT pc FROM PppoeCredential pc WHERE pc.companyId = :companyId " +
            "AND pc.id NOT IN (SELECT c.pppoeCredentialId FROM Contract c WHERE c.pppoeCredentialId IS NOT NULL)")
-    List<PppoeCredential> findUnassignedCredentials(@Param("companyId") Long companyId);
+    Page<PppoeCredential> findUnassignedCredentials(@Param("companyId") Long companyId, Pageable pageable);
 
     // Buscar com filtros múltiplos
     @Query("SELECT pc FROM PppoeCredential pc WHERE pc.companyId = :companyId " +
