@@ -39,8 +39,8 @@ public class AuthController {
                 )
         );
 
-        // Buscar usuário para obter companyId e role
-        ApiUser user = apiUserRepository.findByUsername(loginDTO.getUsername())
+        // Buscar usuário com company (eager loading) para evitar LazyInitializationException
+        ApiUser user = apiUserRepository.findWithCompanyByUsername(loginDTO.getUsername())
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
 
         // Gerar token com companyId (multi-tenant)
@@ -83,7 +83,8 @@ public class AuthController {
         String token = authHeader.replace("Bearer ", "");
         String username = tokenProvider.getUsernameFromToken(token);
 
-        ApiUser user = apiUserRepository.findByUsername(username)
+        // Buscar usuário com company (eager loading) para evitar LazyInitializationException
+        ApiUser user = apiUserRepository.findWithCompanyByUsername(username)
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
 
         Long companyId = user.getCompany() != null ? user.getCompany().getId() : null;
