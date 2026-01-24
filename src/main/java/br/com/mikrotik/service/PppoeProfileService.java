@@ -10,6 +10,8 @@ import br.com.mikrotik.repository.MikrotikServerRepository;
 import br.com.mikrotik.repository.PppoeProfileRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -53,18 +55,16 @@ public class PppoeProfileService {
         return mapToDTO(profile);
     }
 
-    public List<PppoeProfileDTO> getByServer(Long serverId) {
+    public Page<PppoeProfileDTO> getByServer(Long serverId, Pageable pageable) {
         MikrotikServer server = serverRepository.findById(serverId)
                 .orElseThrow(() -> new ResourceNotFoundException("Servidor Mikrotik não encontrado"));
-        return repository.findByMikrotikServer(server).stream()
-                .map(this::mapToDTO)
-                .toList();
+        return repository.findByMikrotikServer(server, pageable)
+                .map(this::mapToDTO);
     }
 
-    public List<PppoeProfileDTO> getAll() {
-        return repository.findAll().stream()
-                .map(this::mapToDTO)
-                .toList();
+    public Page<PppoeProfileDTO> getAll(Pageable pageable) {
+        return repository.findAll(pageable)
+                .map(this::mapToDTO);
     }
 
     @Transactional
