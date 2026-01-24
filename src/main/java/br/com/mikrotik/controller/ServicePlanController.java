@@ -70,19 +70,21 @@ public class ServicePlanController {
 
     @GetMapping("/all")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
-    @Operation(summary = "Listar todos (sem paginação)", description = "Lista todos os planos da empresa")
-    public ResponseEntity<List<ServicePlanDTO>> findAllByCompany() {
+    @Operation(summary = "Listar todos", description = "Lista todos os planos da empresa (paginado)")
+    public ResponseEntity<Page<ServicePlanDTO>> findAllByCompany(
+            @PageableDefault(size = 50, sort = "name") Pageable pageable) {
         log.info("GET /api/service-plans/all - Listando todos os planos");
-        List<ServicePlanDTO> plans = servicePlanService.findAllByCompany();
+        Page<ServicePlanDTO> plans = servicePlanService.findAllByCompany(pageable);
         return ResponseEntity.ok(plans);
     }
 
     @GetMapping("/active-list")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
-    @Operation(summary = "Listar ativos (sem paginação)", description = "Lista planos ativos da empresa")
-    public ResponseEntity<List<ServicePlanDTO>> findActiveByCompany() {
+    @Operation(summary = "Listar ativos", description = "Lista planos ativos da empresa (paginado)")
+    public ResponseEntity<Page<ServicePlanDTO>> findActiveByCompany(
+            @PageableDefault(size = 50, sort = "name") Pageable pageable) {
         log.info("GET /api/service-plans/active-list - Listando planos ativos");
-        List<ServicePlanDTO> plans = servicePlanService.findActiveByCompany();
+        Page<ServicePlanDTO> plans = servicePlanService.findActiveByCompany(pageable);
         return ResponseEntity.ok(plans);
     }
 
