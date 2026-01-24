@@ -40,18 +40,16 @@ public class PppoeConnectionService {
                 .map(this::mapToDTO);
     }
 
-    public List<PppoeConnectionDTO> getByUser(Long userId) {
+    public Page<PppoeConnectionDTO> getByUser(Long userId, Pageable pageable) {
         PppoeUser user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado"));
-        return repository.findByUser(user).stream()
-                .map(this::mapToDTO)
-                .toList();
+        return repository.findByUser(user, pageable)
+                .map(this::mapToDTO);
     }
 
-    public List<PppoeConnectionDTO> getAll() {
-        return repository.findAll().stream()
-                .map(this::mapToDTO)
-                .toList();
+    public Page<PppoeConnectionDTO> getAll(Pageable pageable) {
+        return repository.findAll(pageable)
+                .map(this::mapToDTO);
     }
 
     public Long countActive() {
@@ -60,12 +58,11 @@ public class PppoeConnectionService {
                 .count();
     }
 
-    public List<PppoeConnectionDTO> getActiveByServer(Long serverId) {
+    public Page<PppoeConnectionDTO> getActiveByServer(Long serverId, Pageable pageable) {
         MikrotikServer server = serverRepository.findById(serverId)
                 .orElseThrow(() -> new ResourceNotFoundException("Servidor Mikrotik não encontrado"));
-        return repository.findByMikrotikServerAndActive(server, true).stream()
-                .map(this::mapToDTO)
-                .toList();
+        return repository.findByMikrotikServerAndActive(server, true, pageable)
+                .map(this::mapToDTO);
     }
 
     @Transactional
