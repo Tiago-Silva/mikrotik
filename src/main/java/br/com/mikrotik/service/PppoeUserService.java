@@ -86,10 +86,9 @@ public class PppoeUserService {
                 .map(this::mapToDTO);
     }
 
-    public List<PppoeUserDTO> getAll() {
-        return repository.findAll().stream()
-                .map(this::mapToDTO)
-                .toList();
+    public Page<PppoeUserDTO> getAll(Pageable pageable) {
+        return repository.findAll(pageable)
+                .map(this::mapToDTO);
     }
 
     @Transactional
