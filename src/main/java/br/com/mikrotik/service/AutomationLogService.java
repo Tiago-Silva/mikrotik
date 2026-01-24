@@ -158,17 +158,15 @@ public class AutomationLogService {
     }
 
     /**
-     * Listar logs recentes
+     * Listar logs recentes (paginado)
      */
     @Transactional(readOnly = true)
-    public List<AutomationLogDTO> findRecent() {
+    public Page<AutomationLogDTO> findRecent(Pageable pageable) {
         log.info("Listando logs recentes");
 
         Long companyId = CompanyContextHolder.getCompanyId();
-        List<AutomationLog> logs = automationLogRepository.findTop100ByCompanyIdOrderByExecutedAtDesc(companyId);
-        return logs.stream()
-                .map(AutomationLogDTO::fromEntity)
-                .collect(Collectors.toList());
+        Page<AutomationLog> logs = automationLogRepository.findByCompanyId(companyId, pageable);
+        return logs.map(AutomationLogDTO::fromEntity);
     }
 
     /**
