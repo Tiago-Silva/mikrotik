@@ -3,6 +3,7 @@ package br.com.mikrotik.repository;
 import br.com.mikrotik.model.ApiUser;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -15,6 +16,10 @@ public interface ApiUserRepository extends JpaRepository<ApiUser, Long> {
     // Métodos antigos - mantidos para backward compatibility
     @Deprecated(since = "2.0", forRemoval = false)
     Optional<ApiUser> findByUsername(String username);
+
+    // Método com eager loading de company para evitar LazyInitializationException
+    @EntityGraph(attributePaths = {"company"})
+    Optional<ApiUser> findWithCompanyByUsername(String username);
 
     Optional<ApiUser> findByEmail(String email);
 
