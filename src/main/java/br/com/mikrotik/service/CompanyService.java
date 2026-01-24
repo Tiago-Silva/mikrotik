@@ -81,7 +81,6 @@ public class CompanyService {
     @Transactional(readOnly = true)
     public Page<CompanyDTO> findAll(Pageable pageable) {
         log.info("Listando todas as empresas. Página: {}", pageable.getPageNumber());
-
         return companyRepository.findAll(pageable)
                 .map(this::mapToDTO);
     }
