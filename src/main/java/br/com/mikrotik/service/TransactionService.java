@@ -16,8 +16,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -70,16 +68,25 @@ public class TransactionService {
     }
 
     /**
-     * Listar transações por fatura
+     * Listar todas as transações (paginado)
      */
     @Transactional(readOnly = true)
-    public List<TransactionDTO> findByInvoice(Long invoiceId) {
+    public Page<TransactionDTO> findAll(Pageable pageable) {
+        log.info("Listando todas as transações");
+
+        Page<Transaction> transactions = transactionRepository.findAll(pageable);
+        return transactions.map(TransactionDTO::fromEntity);
+    }
+
+    /**
+     * Listar transações por fatura (paginado)
+     */
+    @Transactional(readOnly = true)
+    public Page<TransactionDTO> findByInvoice(Long invoiceId, Pageable pageable) {
         log.info("Listando transações da fatura: {}", invoiceId);
 
-        List<Transaction> transactions = transactionRepository.findByInvoiceId(invoiceId);
-        return transactions.stream()
-                .map(TransactionDTO::fromEntity)
-                .collect(Collectors.toList());
+        Page<Transaction> transactions = transactionRepository.findByInvoiceId(invoiceId, pageable);
+        return transactions.map(TransactionDTO::fromEntity);
     }
 
     /**
@@ -94,16 +101,14 @@ public class TransactionService {
     }
 
     /**
-     * Listar transações por período
+     * Listar transações por período (paginado)
      */
     @Transactional(readOnly = true)
-    public List<TransactionDTO> findByPeriod(LocalDateTime startDate, LocalDateTime endDate) {
+    public Page<TransactionDTO> findByPeriod(LocalDateTime startDate, LocalDateTime endDate, Pageable pageable) {
         log.info("Listando transações do período: {} a {}", startDate, endDate);
 
-        List<Transaction> transactions = transactionRepository.findByPeriod(startDate, endDate);
-        return transactions.stream()
-                .map(TransactionDTO::fromEntity)
-                .collect(Collectors.toList());
+        Page<Transaction> transactions = transactionRepository.findByPeriod(startDate, endDate, pageable);
+        return transactions.map(TransactionDTO::fromEntity);
     }
 
     /**
