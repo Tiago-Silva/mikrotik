@@ -63,7 +63,7 @@ logging:
   level:
     root: ${LOGGING_LEVEL_ROOT:INFO}
     br.com.mikrotik: ${LOGGING_LEVEL_BR_COM_MIKROTIK:DEBUG}
-    org.springframework.security: ${LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY:DEBUG}
+    org.springframework.security: ${LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY:INFO}
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
 
