@@ -1,6 +1,7 @@
 package br.com.mikrotik.controller;
 
 import br.com.mikrotik.dto.CompanyDTO;
+import br.com.mikrotik.dto.PageResponse;
 import br.com.mikrotik.service.CompanyService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -63,6 +64,19 @@ public class CompanyController {
         Page<CompanyDTO> companies = companyService.findAll(pageable);
         return ResponseEntity.ok(companies);
     }
+
+    // Endpoint alternativo com estrutura JSON garantida
+    @GetMapping("/v2")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @Operation(summary = "[V2] Listar todas as empresas", description = "Lista empresas com estrutura JSON estável")
+    public ResponseEntity<PageResponse<CompanyDTO>> findAllV2(
+            @PageableDefault(size = 20, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
+        log.info("GET /api/companies/v2 - Listando empresas (V2). Página: {}", pageable.getPageNumber());
+        Page<CompanyDTO> companies = companyService.findAll(pageable);
+        PageResponse<CompanyDTO> response = new PageResponse<>(companies);
+        return ResponseEntity.ok(response);
+    }
+
 
     @GetMapping("/active")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
