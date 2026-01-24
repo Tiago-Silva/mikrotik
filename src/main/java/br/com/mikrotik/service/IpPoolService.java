@@ -84,29 +84,25 @@ public class IpPoolService {
     }
 
     /**
-     * Listar todos os pools de um servidor (sem paginação)
+     * Listar todos os pools de um servidor (paginado)
      */
     @Transactional(readOnly = true)
-    public List<IpPoolDTO> findAllByServer(Long serverId) {
+    public Page<IpPoolDTO> findAllByServer(Long serverId, Pageable pageable) {
         log.info("Listando todos os pools do servidor: {}", serverId);
 
-        List<IpPool> pools = ipPoolRepository.findByMikrotikServerId(serverId);
-        return pools.stream()
-                .map(IpPoolDTO::fromEntity)
-                .collect(Collectors.toList());
+        Page<IpPool> pools = ipPoolRepository.findByMikrotikServerId(serverId, pageable);
+        return pools.map(IpPoolDTO::fromEntity);
     }
 
     /**
-     * Listar pools ativos de um servidor (sem paginação)
+     * Listar pools ativos de um servidor (paginado)
      */
     @Transactional(readOnly = true)
-    public List<IpPoolDTO> findActiveByServer(Long serverId) {
+    public Page<IpPoolDTO> findActiveByServer(Long serverId, Pageable pageable) {
         log.info("Listando pools ativos do servidor: {}", serverId);
 
-        List<IpPool> pools = ipPoolRepository.findByMikrotikServerIdAndActive(serverId, true);
-        return pools.stream()
-                .map(IpPoolDTO::fromEntity)
-                .collect(Collectors.toList());
+        Page<IpPool> pools = ipPoolRepository.findByMikrotikServerIdAndActive(serverId, true, pageable);
+        return pools.map(IpPoolDTO::fromEntity);
     }
 
     /**
