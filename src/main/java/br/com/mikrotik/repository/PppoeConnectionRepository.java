@@ -14,6 +14,8 @@ public interface PppoeConnectionRepository extends JpaRepository<PppoeConnection
     List<PppoeConnection> findByUserAndActive(PppoeUser user, Boolean active);
     Page<PppoeConnection> findByMikrotikServer(MikrotikServer server, Pageable pageable);
     List<PppoeConnection> findByMikrotikServerAndActive(MikrotikServer server, Boolean active);
+    Page<PppoeConnection> findByMikrotikServerAndActive(MikrotikServer server, Boolean active, Pageable pageable);
     List<PppoeConnection> findByUser(PppoeUser user);
+    Page<PppoeConnection> findByUser(PppoeUser user, Pageable pageable);
     Long countByActiveTrue();
 }
