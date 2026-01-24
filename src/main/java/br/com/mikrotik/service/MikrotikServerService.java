@@ -62,10 +62,9 @@ public class MikrotikServerService {
         return mapToDTO(server);
     }
 
-    public List<MikrotikServerDTO> getAll() {
-        return repository.findAll().stream()
-                .map(this::mapToDTO)
-                .toList();
+    public Page<MikrotikServerDTO> getAll(Pageable pageable) {
+        return repository.findAll(pageable)
+                .map(this::mapToDTO);
     }
 
     /**
