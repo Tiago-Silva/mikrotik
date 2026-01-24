@@ -49,11 +49,12 @@ public interface ContractRepository extends JpaRepository<Contract, Long> {
                                          @Param("startDate") LocalDate startDate,
                                          @Param("endDate") LocalDate endDate);
 
-    // Buscar contratos para faturamento (dia de cobrança)
+    // Buscar contratos para faturamento (dia de cobrança) - paginado
     @Query("SELECT c FROM Contract c WHERE c.companyId = :companyId " +
            "AND c.status = 'ACTIVE' AND c.billingDay = :day")
-    List<Contract> findContractsForBilling(@Param("companyId") Long companyId,
-                                           @Param("day") Integer day);
+    Page<Contract> findContractsForBilling(@Param("companyId") Long companyId,
+                                           @Param("day") Integer day,
+                                           Pageable pageable);
 
     // Buscar com filtros múltiplos
     @Query("SELECT c FROM Contract c WHERE c.companyId = :companyId " +
