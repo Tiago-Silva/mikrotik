@@ -8,6 +8,10 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -44,16 +48,19 @@ public class PppoeProfileController {
 
     @GetMapping("/server/{serverId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
-    @Operation(summary = "Listar perfis de um servidor", description = "Retorna todos os perfis de um servidor Mikrotik")
-    public ResponseEntity<List<PppoeProfileDTO>> getByServer(@PathVariable Long serverId) {
-        return ResponseEntity.ok(service.getByServer(serverId));
+    @Operation(summary = "Listar perfis de um servidor", description = "Retorna perfis paginados de um servidor Mikrotik")
+    public ResponseEntity<Page<PppoeProfileDTO>> getByServer(
+            @PathVariable Long serverId,
+            @PageableDefault(size = 20, sort = "name") Pageable pageable) {
+        return ResponseEntity.ok(service.getByServer(serverId, pageable));
     }
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
-    @Operation(summary = "Listar todos os perfis", description = "Retorna lista de todos os perfis PPPoE")
-    public ResponseEntity<List<PppoeProfileDTO>> getAll() {
-        return ResponseEntity.ok(service.getAll());
+    @Operation(summary = "Listar todos os perfis", description = "Retorna lista paginada de todos os perfis PPPoE")
+    public ResponseEntity<Page<PppoeProfileDTO>> getAll(
+            @PageableDefault(size = 20, sort = "name") Pageable pageable) {
+        return ResponseEntity.ok(service.getAll(pageable));
     }
 
     @PutMapping("/{id}")
