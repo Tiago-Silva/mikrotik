@@ -82,10 +82,11 @@ public class AutomationLogController {
 
     @GetMapping("/recent")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
-    @Operation(summary = "Listar logs recentes", description = "Retorna os 100 logs mais recentes")
-    public ResponseEntity<List<AutomationLogDTO>> findRecent() {
+    @Operation(summary = "Listar logs recentes", description = "Retorna os logs mais recentes (paginado)")
+    public ResponseEntity<Page<AutomationLogDTO>> findRecent(
+            @PageableDefault(size = 100, sort = "executedAt", direction = Sort.Direction.DESC) Pageable pageable) {
         log.info("GET /api/automation-logs/recent - Listando logs recentes");
-        List<AutomationLogDTO> logs = automationLogService.findRecent();
+        Page<AutomationLogDTO> logs = automationLogService.findRecent(pageable);
         return ResponseEntity.ok(logs);
     }
 
