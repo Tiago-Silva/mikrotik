@@ -30,10 +30,10 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     // Buscar por ID e empresa (segurança multi-tenant)
     Optional<Invoice> findByIdAndCompanyId(Long id, Long companyId);
 
-    // Buscar faturas vencidas
+    // Buscar faturas vencidas (paginado)
     @Query("SELECT i FROM Invoice i WHERE i.companyId = :companyId " +
            "AND i.status IN ('PENDING', 'OVERDUE') AND i.dueDate < :today")
-    List<Invoice> findOverdueInvoices(@Param("companyId") Long companyId, @Param("today") LocalDate today);
+    Page<Invoice> findOverdueInvoices(@Param("companyId") Long companyId, @Param("today") LocalDate today, Pageable pageable);
 
     // Buscar por mês de referência
     List<Invoice> findByCompanyIdAndReferenceMonth(Long companyId, LocalDate referenceMonth);
