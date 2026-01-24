@@ -93,19 +93,21 @@ public class InternetProfileController {
 
     @GetMapping("/all")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
-    @Operation(summary = "Listar todos (sem paginação)", description = "Lista todos os perfis da empresa")
-    public ResponseEntity<List<InternetProfileDTO>> findAllByCompany() {
+    @Operation(summary = "Listar todos", description = "Lista todos os perfis da empresa (paginado)")
+    public ResponseEntity<Page<InternetProfileDTO>> findAllByCompany(
+            @PageableDefault(size = 50, sort = "name") Pageable pageable) {
         log.info("GET /api/internet-profiles/all - Listando todos os perfis");
-        List<InternetProfileDTO> profiles = internetProfileService.findAllByCompany();
+        Page<InternetProfileDTO> profiles = internetProfileService.findAllByCompany(pageable);
         return ResponseEntity.ok(profiles);
     }
 
     @GetMapping("/active-list")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
-    @Operation(summary = "Listar ativos (sem paginação)", description = "Lista perfis ativos da empresa")
-    public ResponseEntity<List<InternetProfileDTO>> findActiveByCompany() {
+    @Operation(summary = "Listar ativos", description = "Lista perfis ativos da empresa (paginado)")
+    public ResponseEntity<Page<InternetProfileDTO>> findActiveByCompany(
+            @PageableDefault(size = 50, sort = "name") Pageable pageable) {
         log.info("GET /api/internet-profiles/active-list - Listando perfis ativos");
-        List<InternetProfileDTO> profiles = internetProfileService.findActiveByCompany();
+        Page<InternetProfileDTO> profiles = internetProfileService.findActiveByCompany(pageable);
         return ResponseEntity.ok(profiles);
     }
 
