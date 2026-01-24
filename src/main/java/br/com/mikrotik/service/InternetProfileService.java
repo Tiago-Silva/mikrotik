@@ -129,31 +129,27 @@ public class InternetProfileService {
     }
 
     /**
-     * Listar todos os perfis da empresa (sem paginação)
+     * Listar todos os perfis da empresa (paginado)
      */
     @Transactional(readOnly = true)
-    public List<InternetProfileDTO> findAllByCompany() {
+    public Page<InternetProfileDTO> findAllByCompany(Pageable pageable) {
         log.info("Listando todos os perfis da empresa");
 
         Long companyId = CompanyContextHolder.getCompanyId();
-        List<InternetProfile> profiles = internetProfileRepository.findByCompanyId(companyId);
-        return profiles.stream()
-                .map(InternetProfileDTO::fromEntity)
-                .collect(Collectors.toList());
+        Page<InternetProfile> profiles = internetProfileRepository.findByCompanyId(companyId, pageable);
+        return profiles.map(InternetProfileDTO::fromEntity);
     }
 
     /**
-     * Listar perfis ativos da empresa (sem paginação)
+     * Listar perfis ativos da empresa (paginado)
      */
     @Transactional(readOnly = true)
-    public List<InternetProfileDTO> findActiveByCompany() {
+    public Page<InternetProfileDTO> findActiveByCompany(Pageable pageable) {
         log.info("Listando perfis ativos da empresa");
 
         Long companyId = CompanyContextHolder.getCompanyId();
-        List<InternetProfile> profiles = internetProfileRepository.findByCompanyIdAndActive(companyId, true);
-        return profiles.stream()
-                .map(InternetProfileDTO::fromEntity)
-                .collect(Collectors.toList());
+        Page<InternetProfile> profiles = internetProfileRepository.findByCompanyIdAndActive(companyId, true, pageable);
+        return profiles.map(InternetProfileDTO::fromEntity);
     }
 
     /**
