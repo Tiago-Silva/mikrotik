@@ -28,23 +28,17 @@ public class CorsConfig {
                 "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"
         ));
 
-        // Headers permitidos
-        configuration.setAllowedHeaders(Arrays.asList(
-                "Authorization",
-                "Content-Type",
-                "Accept",
-                "Origin",
-                "Access-Control-Request-Method",
-                "Access-Control-Request-Headers",
-                "X-Requested-With"
-        ));
+        // Headers permitidos (permitir todos os headers para flexibilidade)
+        configuration.setAllowedHeaders(Arrays.asList("*"));
 
-        // Headers expostos ao cliente
+        // Headers expostos ao cliente (para que o frontend possa lê-los)
         configuration.setExposedHeaders(Arrays.asList(
                 "Authorization",
                 "Content-Type",
                 "Access-Control-Allow-Origin",
-                "Access-Control-Allow-Credentials"
+                "Access-Control-Allow-Credentials",
+                "X-Company-Id",
+                "x-company-id"
         ));
 
         // Permitir credenciais (cookies, authorization headers, etc)
