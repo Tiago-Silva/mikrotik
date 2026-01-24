@@ -120,17 +120,15 @@ public class InvoiceService {
     }
 
     /**
-     * Buscar faturas vencidas
+     * Buscar faturas vencidas (paginado)
      */
     @Transactional(readOnly = true)
-    public List<InvoiceDTO> findOverdue() {
+    public Page<InvoiceDTO> findOverdue(Pageable pageable) {
         log.info("Buscando faturas vencidas");
 
         Long companyId = CompanyContextHolder.getCompanyId();
-        List<Invoice> invoices = invoiceRepository.findOverdueInvoices(companyId, LocalDate.now());
-        return invoices.stream()
-                .map(InvoiceDTO::fromEntity)
-                .collect(Collectors.toList());
+        Page<Invoice> invoices = invoiceRepository.findOverdueInvoices(companyId, LocalDate.now(), pageable);
+        return invoices.map(InvoiceDTO::fromEntity);
     }
 
     /**
