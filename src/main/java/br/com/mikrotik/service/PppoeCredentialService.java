@@ -108,17 +108,15 @@ public class PppoeCredentialService {
     }
 
     /**
-     * Listar credenciais não vinculadas a contratos
+     * Listar credenciais não vinculadas a contratos (paginado)
      */
     @Transactional(readOnly = true)
-    public List<PppoeCredentialDTO> findUnassigned() {
+    public Page<PppoeCredentialDTO> findUnassigned(Pageable pageable) {
         log.info("Listando credenciais não vinculadas a contratos");
 
         Long companyId = CompanyContextHolder.getCompanyId();
-        List<PppoeCredential> credentials = pppoeCredentialRepository.findUnassignedCredentials(companyId);
-        return credentials.stream()
-                .map(PppoeCredentialDTO::fromEntity)
-                .collect(Collectors.toList());
+        Page<PppoeCredential> credentials = pppoeCredentialRepository.findUnassignedCredentials(companyId, pageable);
+        return credentials.map(PppoeCredentialDTO::fromEntity);
     }
 
     /**
