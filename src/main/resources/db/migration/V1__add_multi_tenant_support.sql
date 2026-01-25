@@ -125,29 +125,7 @@ CREATE TABLE ip_pools (
     INDEX idx_mikrotik_server_id (mikrotik_server_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Profiles Técnicos
-CREATE TABLE internet_profiles (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    company_id BIGINT NOT NULL,
-    mikrotik_server_id BIGINT NOT NULL,
-    name VARCHAR(255) NOT NULL,
-    description TEXT,
-    download_kbit BIGINT NOT NULL,
-    upload_kbit BIGINT NOT NULL,
-    session_timeout INT NOT NULL DEFAULT 0,
-    remote_address_pool_id BIGINT,
-    active BOOLEAN DEFAULT TRUE,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (company_id) REFERENCES companies(id),
-    FOREIGN KEY (mikrotik_server_id) REFERENCES mikrotik_servers(id) ON DELETE CASCADE,
-    FOREIGN KEY (remote_address_pool_id) REFERENCES ip_pools(id) ON DELETE SET NULL,
-    INDEX idx_name (name),
-    INDEX idx_mikrotik_server_id (mikrotik_server_id),
-    INDEX idx_company_id (company_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Tabela antiga de Perfis PPPoE (compatibilidade)
+-- Perfis PPPoE (sincronizados do Mikrotik)
 CREATE TABLE pppoe_profiles (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -214,12 +192,12 @@ CREATE TABLE service_plans (
     name VARCHAR(255) NOT NULL,
     description TEXT,
     price DECIMAL(19, 2) NOT NULL,
-    internet_profile_id BIGINT NOT NULL,
+    pppoe_profile_id BIGINT NOT NULL,
     active BOOLEAN DEFAULT TRUE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (company_id) REFERENCES companies(id),
-    FOREIGN KEY (internet_profile_id) REFERENCES internet_profiles(id) ON DELETE RESTRICT,
+    FOREIGN KEY (pppoe_profile_id) REFERENCES pppoe_profiles(id) ON DELETE RESTRICT,
     INDEX idx_company_id (company_id),
     INDEX idx_active (active)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
