@@ -36,15 +36,15 @@ public class ServicePlanDTO {
     @Schema(description = "Preço mensal do plano", example = "99.90", requiredMode = Schema.RequiredMode.REQUIRED)
     private BigDecimal price;
 
-    @NotNull(message = "ID do perfil de internet é obrigatório")
-    @Schema(description = "ID do perfil técnico de internet", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
-    private Long internetProfileId;
+    @NotNull(message = "ID do perfil PPPoE é obrigatório")
+    @Schema(description = "ID do perfil técnico PPPoE", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
+    private Long pppoeProfileId;
 
     @Schema(description = "Plano ativo", example = "true")
     private Boolean active;
 
-    @Schema(description = "Nome do perfil de internet")
-    private String internetProfileName;
+    @Schema(description = "Nome do perfil PPPoE")
+    private String pppoeProfileName;
 
     @Schema(description = "Velocidade de download (Mbps)")
     private String downloadSpeed;
@@ -72,21 +72,21 @@ public class ServicePlanDTO {
                 .name(plan.getName())
                 .description(plan.getDescription())
                 .price(plan.getPrice())
-                .internetProfileId(plan.getInternetProfileId())
+                .pppoeProfileId(plan.getPppoeProfileId())
                 .active(plan.getActive())
                 .createdAt(plan.getCreatedAt())
                 .updatedAt(plan.getUpdatedAt());
 
-        // Adicionar informações do internet profile se disponível
-        if (plan.getInternetProfile() != null) {
-            builder.internetProfileName(plan.getInternetProfile().getName());
+        // Adicionar informações do perfil PPPoE se disponível
+        if (plan.getPppoeProfile() != null) {
+            builder.pppoeProfileName(plan.getPppoeProfile().getName());
 
-            // Converter kbits para Mbps para exibição
-            if (plan.getInternetProfile().getDownloadKbit() != null) {
-                builder.downloadSpeed(plan.getInternetProfile().getDownloadKbit() / 1024 + " Mbps");
+            // Converter bps para Mbps para exibição
+            if (plan.getPppoeProfile().getMaxBitrateDl() != null) {
+                builder.downloadSpeed(plan.getPppoeProfile().getMaxBitrateDl() / 1_000_000 + " Mbps");
             }
-            if (plan.getInternetProfile().getUploadKbit() != null) {
-                builder.uploadSpeed(plan.getInternetProfile().getUploadKbit() / 1024 + " Mbps");
+            if (plan.getPppoeProfile().getMaxBitrateUl() != null) {
+                builder.uploadSpeed(plan.getPppoeProfile().getMaxBitrateUl() / 1_000_000 + " Mbps");
             }
         }
 
@@ -101,7 +101,7 @@ public class ServicePlanDTO {
                 .name(this.name)
                 .description(this.description)
                 .price(this.price)
-                .internetProfileId(this.internetProfileId)
+                .pppoeProfileId(this.pppoeProfileId)
                 .active(this.active)
                 .createdAt(this.createdAt)
                 .updatedAt(this.updatedAt)
