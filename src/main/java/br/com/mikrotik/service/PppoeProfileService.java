@@ -296,7 +296,8 @@ public class PppoeProfileService {
                 profile.getMaxBitrateUl(),
                 profile.getSessionTimeout(),
                 profile.getActive(),
-                profile.getMikrotikServer().getId()
+                profile.getMikrotikServer().getId(),
+                profile.getMikrotikServer().getName()
         );
     }
 }
