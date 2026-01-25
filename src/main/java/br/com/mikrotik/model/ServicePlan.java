@@ -31,8 +31,8 @@ public class ServicePlan {
     @Column(precision = 19, scale = 2, nullable = false)
     private BigDecimal price;
 
-    @Column(name = "internet_profile_id", nullable = false)
-    private Long internetProfileId;
+    @Column(name = "pppoe_profile_id", nullable = false)
+    private Long pppoeProfileId;
 
     @Column(nullable = false)
     @Builder.Default
@@ -49,8 +49,8 @@ public class ServicePlan {
     private Company company;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "internet_profile_id", insertable = false, updatable = false)
-    private InternetProfile internetProfile;
+    @JoinColumn(name = "pppoe_profile_id", insertable = false, updatable = false)
+    private PppoeProfile pppoeProfile;
 
     @PrePersist
     protected void onCreate() {
