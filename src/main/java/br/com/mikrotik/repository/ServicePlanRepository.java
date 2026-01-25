@@ -35,8 +35,8 @@ public interface ServicePlanRepository extends JpaRepository<ServicePlan, Long> 
     // Verificar existência por nome e empresa
     boolean existsByNameAndCompanyId(String name, Long companyId);
 
-    // Buscar planos que usam um internet profile específico
-    List<ServicePlan> findByInternetProfileId(Long internetProfileId);
+    // Buscar planos que usam um perfil PPPoE específico
+    List<ServicePlan> findByPppoeProfileId(Long pppoeProfileId);
 
     // Contar planos por empresa
     long countByCompanyId(Long companyId);
