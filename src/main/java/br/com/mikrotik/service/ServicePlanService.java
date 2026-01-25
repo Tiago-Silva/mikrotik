@@ -4,7 +4,7 @@ import br.com.mikrotik.dto.ServicePlanDTO;
 import br.com.mikrotik.exception.ResourceNotFoundException;
 import br.com.mikrotik.exception.ValidationException;
 import br.com.mikrotik.model.ServicePlan;
-import br.com.mikrotik.repository.InternetProfileRepository;
+import br.com.mikrotik.repository.PppoeProfileRepository;
 import br.com.mikrotik.repository.ServicePlanRepository;
 import br.com.mikrotik.util.CompanyContextHolder;
 import lombok.RequiredArgsConstructor;
@@ -14,8 +14,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -23,7 +21,7 @@ import java.util.stream.Collectors;
 public class ServicePlanService {
 
     private final ServicePlanRepository servicePlanRepository;
-    private final InternetProfileRepository internetProfileRepository;
+    private final PppoeProfileRepository pppoeProfileRepository;
 
     /**
      * Criar novo plano de serviço
@@ -37,9 +35,9 @@ public class ServicePlanService {
             throw new ValidationException("Company ID não encontrado no contexto");
         }
 
-        // Validar se internet profile existe e pertence à empresa
-        if (!internetProfileRepository.findByIdAndCompanyId(dto.getInternetProfileId(), companyId).isPresent()) {
-            throw new ValidationException("Perfil de internet não encontrado ou não pertence à empresa");
+        // Validar se perfil PPPoE existe
+        if (!pppoeProfileRepository.findById(dto.getPppoeProfileId()).isPresent()) {
+            throw new ValidationException("Perfil PPPoE não encontrado");
         }
 
         // Verificar se nome já existe na empresa
@@ -147,17 +145,17 @@ public class ServicePlanService {
             }
         }
 
-        // Validar internet profile se foi alterado
-        if (!existing.getInternetProfileId().equals(dto.getInternetProfileId())) {
-            if (!internetProfileRepository.findByIdAndCompanyId(dto.getInternetProfileId(), companyId).isPresent()) {
-                throw new ValidationException("Perfil de internet não encontrado ou não pertence à empresa");
+        // Validar perfil PPPoE se foi alterado
+        if (!existing.getPppoeProfileId().equals(dto.getPppoeProfileId())) {
+            if (!pppoeProfileRepository.findById(dto.getPppoeProfileId()).isPresent()) {
+                throw new ValidationException("Perfil PPPoE não encontrado");
             }
         }
 
         existing.setName(dto.getName());
         existing.setDescription(dto.getDescription());
         existing.setPrice(dto.getPrice());
-        existing.setInternetProfileId(dto.getInternetProfileId());
+        existing.setPppoeProfileId(dto.getPppoeProfileId());
         existing.setActive(dto.getActive());
 
         existing = servicePlanRepository.save(existing);
