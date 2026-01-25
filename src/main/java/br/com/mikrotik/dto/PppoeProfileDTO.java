@@ -30,4 +30,6 @@ public class PppoeProfileDTO {
 
     @NotNull(message = "Mikrotik Server ID é obrigatório")
     private Long mikrotikServerId;
+
+    private String mikrotikServerName;
 }
