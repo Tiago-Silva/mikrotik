@@ -73,6 +73,10 @@ Escolha seu perfil para ver a documentação mais relevante:
 - **[SYNC_PROFILES.md](SYNC_PROFILES.md)** - Sincronização de perfis
 - **[SYNC_PROFILES_IMPLEMENTATION.md](SYNC_PROFILES_IMPLEMENTATION.md)** - Detalhes técnicos
 - **[SYNC_FEATURE_SUMMARY.md](SYNC_FEATURE_SUMMARY.md)** - Resumo
+- **[VALIDATION_CPF_CNPJ.md](VALIDATION_CPF_CNPJ.md)** - Validação de documentos
+
+### 🧪 Testes
+- **[TEST_DATA_CPF_CNPJ.md](TEST_DATA_CPF_CNPJ.md)** - CPFs e CNPJs válidos para teste
 
 ### 📊 Status
 - **[IMPLEMENTATION_COMPLETE.md](IMPLEMENTATION_COMPLETE.md)** - Status de implementação
