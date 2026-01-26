@@ -30,8 +30,8 @@ public interface ContractRepository extends JpaRepository<Contract, Long> {
     // Buscar contratos ativos
     List<Contract> findByCompanyIdAndStatus(Long companyId, Contract.ContractStatus status);
 
-    // Buscar por credencial PPPoE
-    Optional<Contract> findByPppoeCredentialId(Long pppoeCredentialId);
+    // Buscar por usuário PPPoE
+    Optional<Contract> findByPppoeUserId(Long pppoeUserId);
 
     // Verificar se cliente possui contratos ativos
     boolean existsByCustomerIdAndStatus(Long customerId, Contract.ContractStatus status);
