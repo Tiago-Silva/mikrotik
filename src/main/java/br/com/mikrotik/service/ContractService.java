@@ -3,19 +3,20 @@ package br.com.mikrotik.service;
 import br.com.mikrotik.dto.ContractDTO;
 import br.com.mikrotik.exception.ResourceNotFoundException;
 import br.com.mikrotik.exception.ValidationException;
-import br.com.mikrotik.model.Contract;
+import br.com.mikrotik.model.*;
 import br.com.mikrotik.repository.*;
 import br.com.mikrotik.util.CompanyContextHolder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.time.LocalDate;
-import java.util.List;
-import java.util.stream.Collectors;
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -25,8 +26,10 @@ public class ContractService {
     private final ContractRepository contractRepository;
     private final CustomerRepository customerRepository;
     private final ServicePlanRepository servicePlanRepository;
-    private final PppoeCredentialRepository pppoeCredentialRepository;
+    private final PppoeUserRepository pppoeUserRepository;
     private final AddressRepository addressRepository;
+    private final MikrotikSshService mikrotikSshService;
+    private final PasswordEncoder passwordEncoder;
 
     /**
      * Criar novo contrato
@@ -50,14 +53,14 @@ public class ContractService {
             throw new ValidationException("Plano de serviço não encontrado ou não pertence à empresa");
         }
 
-        // Validar credencial PPPoE se fornecida
-        if (dto.getPppoeCredentialId() != null) {
-            if (!pppoeCredentialRepository.findByIdAndCompanyId(dto.getPppoeCredentialId(), companyId).isPresent()) {
-                throw new ValidationException("Credencial PPPoE não encontrada ou não pertence à empresa");
+        // Validar usuário PPPoE se fornecido
+        if (dto.getPppoeUserId() != null) {
+            if (!pppoeUserRepository.findById(dto.getPppoeUserId()).isPresent()) {
+                throw new ValidationException("Usuário PPPoE não encontrado");
             }
-            // Verificar se credencial já está vinculada a outro contrato
-            if (contractRepository.findByPppoeCredentialId(dto.getPppoeCredentialId()).isPresent()) {
-                throw new ValidationException("Credencial PPPoE já está vinculada a outro contrato");
+            // Verificar se usuário já está vinculado a outro contrato
+            if (contractRepository.findByPppoeUserId(dto.getPppoeUserId()).isPresent()) {
+                throw new ValidationException("Usuário PPPoE já está vinculado a outro contrato");
             }
         }
 
@@ -149,18 +152,18 @@ public class ContractService {
         Contract existing = contractRepository.findByIdAndCompanyId(id, companyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Contrato não encontrado com ID: " + id));
 
-        // Validar credencial PPPoE se foi alterada
-        if (dto.getPppoeCredentialId() != null &&
-            !dto.getPppoeCredentialId().equals(existing.getPppoeCredentialId())) {
-            if (!pppoeCredentialRepository.findByIdAndCompanyId(dto.getPppoeCredentialId(), companyId).isPresent()) {
-                throw new ValidationException("Credencial PPPoE não encontrada ou não pertence à empresa");
+        // Validar usuário PPPoE se foi alterado
+        if (dto.getPppoeUserId() != null &&
+            !dto.getPppoeUserId().equals(existing.getPppoeUserId())) {
+            if (!pppoeUserRepository.findById(dto.getPppoeUserId()).isPresent()) {
+                throw new ValidationException("Usuário PPPoE não encontrado");
             }
-            if (contractRepository.findByPppoeCredentialId(dto.getPppoeCredentialId()).isPresent()) {
-                throw new ValidationException("Credencial PPPoE já está vinculada a outro contrato");
+            if (contractRepository.findByPppoeUserId(dto.getPppoeUserId()).isPresent()) {
+                throw new ValidationException("Usuário PPPoE já está vinculado a outro contrato");
             }
         }
 
-        existing.setPppoeCredentialId(dto.getPppoeCredentialId());
+        existing.setPppoeUserId(dto.getPppoeUserId());
         existing.setInstallationAddressId(dto.getInstallationAddressId());
         existing.setBillingDay(dto.getBillingDay());
         existing.setAmount(dto.getAmount());
@@ -201,7 +204,41 @@ public class ContractService {
      */
     @Transactional
     public ContractDTO activate(Long id) {
-        return updateStatus(id, Contract.ContractStatus.ACTIVE);
+        log.info("=== INICIANDO ATIVAÇÃO DO CONTRATO {} ===", id);
+
+        Long companyId = CompanyContextHolder.getCompanyId();
+        log.info("Company ID: {}", companyId);
+
+        Contract contract = contractRepository.findByIdAndCompanyId(id, companyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Contrato não encontrado"));
+
+        log.info("Contrato encontrado - ID: {}, Customer: {}, ServicePlan: {}, PppoeUserId: {}",
+                contract.getId(), contract.getCustomerId(), contract.getServicePlanId(), contract.getPppoeUserId());
+
+        // Se não tem usuário PPPoE vinculado, criar agora
+        if (contract.getPppoeUserId() == null) {
+            log.info(">>> PPPOE USER ID É NULL - CRIANDO CREDENCIAL PPPoE PARA CONTRATO {} <<<", id);
+            try {
+                createPppoeUserForContract(contract);
+                log.info(">>> CREDENCIAL PPPoE CRIADA COM SUCESSO <<<");
+            } catch (Exception e) {
+                log.error("!!! ERRO AO CRIAR CREDENCIAL PPPoE: {} !!!", e.getMessage(), e);
+                throw e;
+            }
+        } else {
+            log.info("Contrato JÁ possui PPPoE User vinculado: {}", contract.getPppoeUserId());
+        }
+
+        // Atualizar status
+        log.info("Atualizando status do contrato para ACTIVE");
+        ContractDTO contractDTO = updateStatus(id, Contract.ContractStatus.ACTIVE);
+
+        // Desbloquear no Mikrotik (caso estivesse bloqueado antes)
+        log.info("Desbloqueando usuário no Mikrotik (se aplicável)");
+        unblockUserInMikrotik(id);
+
+        log.info("=== ATIVAÇÃO DO CONTRATO {} CONCLUÍDA ===", id);
+        return contractDTO;
     }
 
     /**
@@ -209,7 +246,17 @@ public class ContractService {
      */
     @Transactional
     public ContractDTO suspendFinancial(Long id) {
-        return updateStatus(id, Contract.ContractStatus.SUSPENDED_FINANCIAL);
+        log.info("=== SUSPENDENDO CONTRATO POR INADIMPLÊNCIA - ID: {} ===", id);
+
+        ContractDTO contract = updateStatus(id, Contract.ContractStatus.SUSPENDED_FINANCIAL);
+        log.info("Status alterado para: SUSPENDED_FINANCIAL");
+
+        // Bloquear no Mikrotik
+        log.info("Chamando blockUserInMikrotik...");
+        blockUserInMikrotik(id);
+
+        log.info("=== SUSPENSÃO CONCLUÍDA ===");
+        return contract;
     }
 
     /**
@@ -217,7 +264,12 @@ public class ContractService {
      */
     @Transactional
     public ContractDTO suspendByRequest(Long id) {
-        return updateStatus(id, Contract.ContractStatus.SUSPENDED_REQUEST);
+        ContractDTO contract = updateStatus(id, Contract.ContractStatus.SUSPENDED_REQUEST);
+
+        // Bloquear no Mikrotik
+        blockUserInMikrotik(id);
+
+        return contract;
     }
 
     /**
@@ -225,7 +277,17 @@ public class ContractService {
      */
     @Transactional
     public ContractDTO cancel(Long id) {
-        return updateStatus(id, Contract.ContractStatus.CANCELED);
+        log.info("=== CANCELANDO CONTRATO - ID: {} ===", id);
+
+        ContractDTO contract = updateStatus(id, Contract.ContractStatus.CANCELED);
+        log.info("Status alterado para: CANCELED");
+
+        // Deletar usuário do Mikrotik ao cancelar
+        log.info("Chamando deleteUserInMikrotik...");
+        deleteUserInMikrotik(id);
+
+        log.info("=== CANCELAMENTO CONCLUÍDO ===");
+        return contract;
     }
 
     /**
@@ -271,5 +333,363 @@ public class ContractService {
     public long countByStatus(Contract.ContractStatus status) {
         Long companyId = CompanyContextHolder.getCompanyId();
         return contractRepository.countByCompanyIdAndStatus(companyId, status);
+    }
+
+    /**
+     * Bloquear usuário no Mikrotik
+     */
+    private void blockUserInMikrotik(Long contractId) {
+        log.info("==========================================================");
+        log.info(">>> BLOQUEANDO USUÁRIO NO MIKROTIK - Contrato ID: {} <<<", contractId);
+        log.info("==========================================================");
+
+        try {
+            Long companyId = CompanyContextHolder.getCompanyId();
+            log.info("Company ID: {}", companyId);
+
+            Contract contract = contractRepository.findByIdAndCompanyId(contractId, companyId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Contrato não encontrado"));
+            log.info("Contrato encontrado - pppoeUserId: {}", contract.getPppoeUserId());
+
+            if (contract.getPppoeUserId() == null) {
+                log.warn("⚠️  CONTRATO {} NÃO POSSUI USUÁRIO PPPoE VINCULADO - NÃO É POSSÍVEL BLOQUEAR", contractId);
+                log.warn("⚠️  Para bloquear, o contrato precisa ter sido ativado primeiro (criando credencial PPPoE)");
+                return;
+            }
+
+            log.info("Buscando usuário PPPoE ID: {}", contract.getPppoeUserId());
+            PppoeUser pppoeUser = pppoeUserRepository.findById(contract.getPppoeUserId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Usuário PPPoE não encontrado"));
+            log.info("Usuário PPPoE encontrado: {}", pppoeUser.getUsername());
+
+            MikrotikServer server = pppoeUser.getMikrotikServer();
+            log.info("Servidor Mikrotik: {} ({}:{})", server.getName(), server.getIpAddress(), server.getPort());
+
+            // 1. Alterar perfil para "BLOQUEADO"
+            log.info(">>> PASSO 1: Alterando perfil para 'BLOQUEADO' <<<");
+            mikrotikSshService.changePppoeUserProfile(
+                    server.getIpAddress(),
+                    server.getPort(),
+                    server.getUsername(),
+                    server.getPassword(),
+                    pppoeUser.getUsername(),
+                    "BLOQUEADO"
+            );
+            log.info("✅ Perfil alterado com sucesso no Mikrotik");
+
+            // 2. Desconectar usuário ativo
+            log.info(">>> PASSO 2: Desconectando usuário ativo <<<");
+            mikrotikSshService.disconnectActivePppoeUser(
+                    server.getIpAddress(),
+                    server.getPort(),
+                    server.getUsername(),
+                    server.getPassword(),
+                    pppoeUser.getUsername()
+            );
+            log.info("✅ Usuário desconectado com sucesso");
+
+            // 3. Atualizar status no banco
+            log.info(">>> PASSO 3: Atualizando status no banco <<<");
+            pppoeUser.setStatus(PppoeUser.UserStatus.DISABLED);
+            pppoeUser.setUpdatedAt(LocalDateTime.now());
+            pppoeUserRepository.save(pppoeUser);
+            log.info("✅ Status atualizado no banco: DISABLED");
+
+            log.info("==========================================================");
+            log.info("✅ USUÁRIO PPPoE {} BLOQUEADO COM SUCESSO NO MIKROTIK", pppoeUser.getUsername());
+            log.info("==========================================================");
+
+        } catch (Exception e) {
+            log.error("==========================================================");
+            log.error("❌ ERRO AO BLOQUEAR USUÁRIO NO MIKROTIK - Contrato ID: {}", contractId);
+            log.error("Tipo de erro: {}", e.getClass().getSimpleName());
+            log.error("Mensagem: {}", e.getMessage());
+            log.error("Stack trace:", e);
+            log.error("==========================================================");
+            // Não lança exceção para não impedir a suspensão do contrato
+        }
+    }
+
+    /**
+     * Desbloquear usuário no Mikrotik
+     */
+    private void unblockUserInMikrotik(Long contractId) {
+        try {
+            Long companyId = CompanyContextHolder.getCompanyId();
+            Contract contract = contractRepository.findByIdAndCompanyId(contractId, companyId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Contrato não encontrado"));
+
+            if (contract.getPppoeUserId() == null) {
+                log.warn("Contrato {} não possui usuário PPPoE vinculado", contractId);
+                return;
+            }
+
+            PppoeUser pppoeUser = pppoeUserRepository.findById(contract.getPppoeUserId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Usuário PPPoE não encontrado"));
+
+            MikrotikServer server = pppoeUser.getMikrotikServer();
+
+            // Buscar perfil original do plano do contrato
+            ServicePlan servicePlan = servicePlanRepository.findById(contract.getServicePlanId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Plano não encontrado"));
+
+            String originalProfile = servicePlan.getPppoeProfile().getName();
+
+            // 1. Restaurar perfil original
+            mikrotikSshService.changePppoeUserProfile(
+                    server.getIpAddress(),
+                    server.getPort(),
+                    server.getUsername(),
+                    server.getPassword(),
+                    pppoeUser.getUsername(),
+                    originalProfile
+            );
+
+            // 2. Atualizar status no banco
+            pppoeUser.setStatus(PppoeUser.UserStatus.OFFLINE);
+            pppoeUser.setUpdatedAt(LocalDateTime.now());
+            pppoeUserRepository.save(pppoeUser);
+
+            log.info("Usuário PPPoE {} desbloqueado com sucesso no Mikrotik", pppoeUser.getUsername());
+
+        } catch (Exception e) {
+            log.error("Erro ao desbloquear usuário no Mikrotik: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Deletar usuário PPPoE do Mikrotik ao cancelar contrato
+     */
+    private void deleteUserInMikrotik(Long contractId) {
+        log.info("==========================================================");
+        log.info(">>> DELETANDO USUÁRIO DO MIKROTIK - Contrato ID: {} <<<", contractId);
+        log.info("==========================================================");
+
+        try {
+            Long companyId = CompanyContextHolder.getCompanyId();
+            log.info("Company ID: {}", companyId);
+
+            Contract contract = contractRepository.findByIdAndCompanyId(contractId, companyId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Contrato não encontrado"));
+            log.info("Contrato encontrado - pppoeUserId: {}", contract.getPppoeUserId());
+
+            if (contract.getPppoeUserId() == null) {
+                log.warn("⚠️  CONTRATO {} NÃO POSSUI USUÁRIO PPPoE VINCULADO - NADA PARA DELETAR", contractId);
+                return;
+            }
+
+            log.info("Buscando usuário PPPoE ID: {}", contract.getPppoeUserId());
+            PppoeUser pppoeUser = pppoeUserRepository.findById(contract.getPppoeUserId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Usuário PPPoE não encontrado"));
+            log.info("Usuário PPPoE encontrado: {}", pppoeUser.getUsername());
+
+            MikrotikServer server = pppoeUser.getMikrotikServer();
+            log.info("Servidor Mikrotik: {} ({}:{})", server.getName(), server.getIpAddress(), server.getPort());
+
+            // 1. Deletar do Mikrotik
+            log.info(">>> DELETANDO USUÁRIO DO MIKROTIK <<<");
+            mikrotikSshService.deletePppoeUser(
+                    server.getIpAddress(),
+                    server.getPort(),
+                    server.getUsername(),
+                    server.getPassword(),
+                    pppoeUser.getUsername()
+            );
+            log.info("✅ Usuário deletado do Mikrotik");
+
+            // 2. Deletar do banco de dados
+            log.info(">>> DELETANDO USUÁRIO DO BANCO DE DADOS <<<");
+            pppoeUserRepository.delete(pppoeUser);
+            log.info("✅ Usuário deletado do banco");
+
+            // 3. Remover vínculo do contrato
+            log.info(">>> REMOVENDO VÍNCULO DO CONTRATO <<<");
+            contract.setPppoeUserId(null);
+            contractRepository.save(contract);
+            log.info("✅ Vínculo removido - pppoeUserId: null");
+
+            log.info("==========================================================");
+            log.info("✅ USUÁRIO PPPoE {} DELETADO COM SUCESSO DO MIKROTIK E DO BANCO", pppoeUser.getUsername());
+            log.info("==========================================================");
+
+        } catch (Exception e) {
+            log.error("==========================================================");
+            log.error("❌ ERRO AO DELETAR USUÁRIO DO MIKROTIK - Contrato ID: {}", contractId);
+            log.error("Tipo de erro: {}", e.getClass().getSimpleName());
+            log.error("Mensagem: {}", e.getMessage());
+            log.error("Stack trace:", e);
+            log.error("==========================================================");
+            // Não lança exceção para não impedir o cancelamento do contrato
+        }
+    }
+
+    /**
+     * Criar usuário PPPoE para o contrato
+     */
+    private void createPppoeUserForContract(Contract contract) {
+        log.info(">>> ENTRANDO EM createPppoeUserForContract - Contrato ID: {} <<<", contract.getId());
+        try {
+            // Buscar plano de serviço
+            log.info("Buscando plano de serviço ID: {}", contract.getServicePlanId());
+            ServicePlan servicePlan = servicePlanRepository.findById(contract.getServicePlanId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Plano de serviço não encontrado"));
+            log.info("Plano encontrado: {}", servicePlan.getName());
+
+            PppoeProfile profile = servicePlan.getPppoeProfile();
+            if (profile == null) {
+                log.error("!!! ERRO: Plano de serviço não possui perfil PPPoE configurado !!!");
+                throw new ValidationException("Plano de serviço não possui perfil PPPoE configurado");
+            }
+            log.info("Perfil PPPoE encontrado: {} (ID: {})", profile.getName(), profile.getId());
+
+            MikrotikServer server = profile.getMikrotikServer();
+            log.info("Servidor Mikrotik: {} ({}:{})", server.getName(), server.getIpAddress(), server.getPort());
+
+            // Buscar cliente
+            log.info("Buscando cliente ID: {}", contract.getCustomerId());
+            Customer customer = customerRepository.findById(contract.getCustomerId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Cliente não encontrado"));
+            log.info("Cliente encontrado: {}", customer.getName());
+
+            // Buscar endereço de instalação
+            String enderecoCompleto = "";
+            if (contract.getInstallationAddressId() != null) {
+                log.info("Buscando endereço de instalação ID: {}", contract.getInstallationAddressId());
+                Address installationAddress = addressRepository.findById(contract.getInstallationAddressId())
+                        .orElse(null);
+                if (installationAddress != null) {
+                    enderecoCompleto = String.format("%s, %s - %s, %s/%s",
+                            installationAddress.getStreet(),
+                            installationAddress.getNumber(),
+                            installationAddress.getDistrict(),
+                            installationAddress.getCity(),
+                            installationAddress.getState());
+                    log.info("Endereço encontrado: {}", enderecoCompleto);
+                } else {
+                    log.warn("Endereço de instalação não encontrado no banco");
+                }
+            } else {
+                log.warn("Contrato não possui installationAddressId");
+            }
+
+            // Gerar username único
+            log.info("Gerando username único...");
+            String username = generateUniqueUsername(customer);
+            String password = generateSecurePassword();
+            log.info("Username gerado: {}", username);
+
+            // Montar comentário completo
+            String comentario = String.format("Contrato #%d - %s - %s",
+                    contract.getId(),
+                    customer.getName(),
+                    enderecoCompleto.isEmpty() ? "Endereço não informado" : enderecoCompleto);
+            log.info("Comentário: {}", comentario);
+
+            // 1. Criar no Mikrotik COM endereço no comentário
+            log.info(">>> CRIANDO USUÁRIO NO MIKROTIK <<<");
+            mikrotikSshService.createPppoeUserWithComment(
+                    server.getIpAddress(),
+                    server.getPort(),
+                    server.getUsername(),
+                    server.getPassword(),
+                    username,
+                    password,
+                    profile.getName(),
+                    comentario
+            );
+            log.info(">>> USUÁRIO CRIADO NO MIKROTIK COM SUCESSO <<<");
+
+            // 2. Salvar no banco
+            log.info(">>> SALVANDO USUÁRIO NO BANCO DE DADOS <<<");
+            PppoeUser pppoeUser = new PppoeUser();
+            pppoeUser.setCompanyId(contract.getCompanyId());
+            pppoeUser.setUsername(username);
+            pppoeUser.setPassword(passwordEncoder.encode(password));
+            pppoeUser.setEmail(customer.getEmail() != null ? customer.getEmail() : username + "@cliente.local");
+            pppoeUser.setComment(comentario);
+            pppoeUser.setStatus(PppoeUser.UserStatus.OFFLINE);
+            pppoeUser.setActive(true);
+            pppoeUser.setProfile(profile);
+            pppoeUser.setMikrotikServer(server);
+            pppoeUser.setCreatedAt(LocalDateTime.now());
+            pppoeUser.setUpdatedAt(LocalDateTime.now());
+
+            PppoeUser saved = pppoeUserRepository.save(pppoeUser);
+            log.info(">>> USUÁRIO SALVO NO BANCO - ID: {} <<<", saved.getId());
+
+            // 3. Vincular ao contrato
+            log.info(">>> VINCULANDO USUÁRIO PPPoE AO CONTRATO <<<");
+            contract.setPppoeUserId(saved.getId());
+            contractRepository.save(contract);
+            log.info(">>> CONTRATO ATUALIZADO - pppoeUserId: {} <<<", saved.getId());
+
+            log.info("==========================================================");
+            log.info("✅ CREDENCIAL PPPoE CRIADA COM SUCESSO!");
+            log.info("Username: {}", username);
+            log.info("Senha: {}", password);
+            log.info("Perfil: {}", profile.getName());
+            log.info("Comentário: {}", comentario);
+            log.info("==========================================================");
+            log.info("⚠️  IMPORTANTE: Enviar estas credenciais ao cliente!");
+            log.info("==========================================================");
+
+            // TODO: Implementar envio de email/SMS com as credenciais para o cliente
+
+        } catch (Exception e) {
+            log.error("==========================================================");
+            log.error("❌ ERRO AO CRIAR CREDENCIAL PPPoE PARA CONTRATO {}", contract.getId());
+            log.error("Tipo de erro: {}", e.getClass().getSimpleName());
+            log.error("Mensagem: {}", e.getMessage());
+            log.error("Stack trace:", e);
+            log.error("==========================================================");
+            throw new RuntimeException("Erro ao criar credencial PPPoE: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Gerar username único baseado no cliente
+     */
+    private String generateUniqueUsername(Customer customer) {
+        // Pegar nome do cliente e limpar caracteres especiais
+        String baseName = customer.getName()
+                .toLowerCase()
+                .replaceAll("[^a-z0-9]", "")
+                .replaceAll("\\s+", "");
+
+        // Limitar tamanho
+        if (baseName.length() > 10) {
+            baseName = baseName.substring(0, 10);
+        }
+
+        // Se ficou vazio, usar "cliente"
+        if (baseName.isEmpty()) {
+            baseName = "cliente";
+        }
+
+        String username = baseName;
+        int counter = 1;
+
+        // Garantir unicidade
+        while (pppoeUserRepository.findByUsername(username).isPresent()) {
+            username = baseName + counter++;
+        }
+
+        return username;
+    }
+
+    /**
+     * Gerar senha segura aleatória
+     */
+    private String generateSecurePassword() {
+        // Caracteres sem ambiguidade (sem I, l, 1, O, 0)
+        String chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#$";
+        SecureRandom random = new SecureRandom();
+        StringBuilder password = new StringBuilder();
+
+        for (int i = 0; i < 12; i++) {
+            password.append(chars.charAt(random.nextInt(chars.length())));
+        }
+
+        return password.toString();
     }
 }
