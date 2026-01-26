@@ -33,6 +33,21 @@ public class PppoeProfileService {
         MikrotikServer server = serverRepository.findById(dto.getMikrotikServerId())
                 .orElseThrow(() -> new ResourceNotFoundException("Servidor Mikrotik não encontrado"));
 
+        // 1. CRIAR NO MIKROTIK PRIMEIRO
+        log.info("Criando perfil PPPoE no Mikrotik e no banco de dados");
+        sshService.createPppoeProfile(
+                server.getIpAddress(),
+                server.getPort(),
+                server.getUsername(),
+                server.getPassword(),
+                dto.getName(),
+                dto.getMaxBitrateDl(),
+                dto.getMaxBitrateUl(),
+                dto.getSessionTimeout(),
+                dto.getDescription()
+        );
+
+        // 2. SALVAR NO BANCO
         PppoeProfile profile = new PppoeProfile();
         profile.setName(dto.getName());
         profile.setDescription(dto.getDescription());
@@ -45,7 +60,7 @@ public class PppoeProfileService {
         profile.setUpdatedAt(LocalDateTime.now());
 
         PppoeProfile saved = repository.save(profile);
-        log.info("Perfil PPPoE criado: {}", saved.getId());
+        log.info("Perfil PPPoE criado com sucesso: {} (Mikrotik + Banco)", saved.getId());
         return mapToDTO(saved);
     }
 
@@ -72,6 +87,25 @@ public class PppoeProfileService {
         PppoeProfile profile = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Perfil PPPoE não encontrado: " + id));
 
+        String oldName = profile.getName();
+        MikrotikServer server = profile.getMikrotikServer();
+
+        // 1. ATUALIZAR NO MIKROTIK PRIMEIRO
+        log.info("Atualizando perfil PPPoE no Mikrotik e no banco de dados");
+        sshService.updatePppoeProfile(
+                server.getIpAddress(),
+                server.getPort(),
+                server.getUsername(),
+                server.getPassword(),
+                oldName,  // Nome antigo
+                dto.getName(),  // Nome novo
+                dto.getMaxBitrateDl(),
+                dto.getMaxBitrateUl(),
+                dto.getSessionTimeout(),
+                dto.getDescription()
+        );
+
+        // 2. ATUALIZAR NO BANCO
         profile.setName(dto.getName());
         profile.setDescription(dto.getDescription());
         profile.setMaxBitrateDl(dto.getMaxBitrateDl());
@@ -81,7 +115,7 @@ public class PppoeProfileService {
         profile.setUpdatedAt(LocalDateTime.now());
 
         PppoeProfile updated = repository.save(profile);
-        log.info("Perfil PPPoE atualizado: {}", updated.getId());
+        log.info("Perfil PPPoE atualizado com sucesso: {} (Mikrotik + Banco)", updated.getId());
         return mapToDTO(updated);
     }
 
@@ -89,8 +123,22 @@ public class PppoeProfileService {
     public void delete(Long id) {
         PppoeProfile profile = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Perfil PPPoE não encontrado: " + id));
+
+        MikrotikServer server = profile.getMikrotikServer();
+
+        // 1. DELETAR DO MIKROTIK PRIMEIRO
+        log.info("Deletando perfil PPPoE do Mikrotik e do banco de dados");
+        sshService.deletePppoeProfile(
+                server.getIpAddress(),
+                server.getPort(),
+                server.getUsername(),
+                server.getPassword(),
+                profile.getName()
+        );
+
+        // 2. DELETAR DO BANCO
         repository.delete(profile);
-        log.info("Perfil PPPoE deletado: {}", id);
+        log.info("Perfil PPPoE deletado com sucesso: {} (Mikrotik + Banco)", id);
     }
 
     @Transactional
