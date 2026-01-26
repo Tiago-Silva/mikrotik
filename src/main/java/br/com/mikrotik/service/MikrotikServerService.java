@@ -15,7 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -45,6 +44,7 @@ public class MikrotikServerService {
         // Multi-tenant: Associar à company do contexto (se disponível)
         Long companyId = CompanyContextHolder.getCompanyId();
         if (companyId != null) {
+            server.setCompanyId(companyId);
             Company company = companyRepository.findById(companyId)
                     .orElseThrow(() -> new ResourceNotFoundException("Empresa não encontrada: " + companyId));
             server.setCompany(company);
@@ -128,15 +128,20 @@ public class MikrotikServerService {
     }
 
     private MikrotikServerDTO mapToDTO(MikrotikServer server) {
-        return new MikrotikServerDTO(
-                server.getId(),
-                server.getName(),
-                server.getIpAddress(),
-                server.getPort(),
-                server.getUsername(),
-                server.getPassword(),
-                server.getDescription(),
-                server.getActive()
-        );
+        MikrotikServerDTO dto = new MikrotikServerDTO();
+        dto.setId(server.getId());
+        dto.setCompanyId(server.getCompanyId());
+        dto.setName(server.getName());
+        dto.setIpAddress(server.getIpAddress());
+        dto.setPort(server.getPort());
+        dto.setUsername(server.getUsername());
+        dto.setPassword(server.getPassword());
+        dto.setDescription(server.getDescription());
+        dto.setActive(server.getActive());
+        dto.setLastSyncAt(server.getLastSyncAt());
+        dto.setSyncStatus(server.getSyncStatus());
+        dto.setCreatedAt(server.getCreatedAt());
+        dto.setUpdatedAt(server.getUpdatedAt());
+        return dto;
     }
 }
