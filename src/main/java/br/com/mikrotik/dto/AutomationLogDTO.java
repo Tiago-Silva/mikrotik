@@ -75,8 +75,8 @@ public class AutomationLogDTO {
             if (log.getContract().getCustomer() != null) {
                 builder.customerName(log.getContract().getCustomer().getName());
             }
-            if (log.getContract().getPppoeCredential() != null) {
-                builder.pppoeUsername(log.getContract().getPppoeCredential().getUsername());
+            if (log.getContract().getPppoeUser() != null) {
+                builder.pppoeUsername(log.getContract().getPppoeUser().getUsername());
             }
         }
 
