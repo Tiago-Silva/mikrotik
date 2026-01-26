@@ -1,9 +1,8 @@
 package br.com.mikrotik.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+
 import java.time.LocalDateTime;
 
 @Entity
@@ -16,9 +15,14 @@ public class MikrotikServer {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Getter
+    @Setter
+    @Column(name = "company_id")
+    private Long companyId;
+
     // Multi-tenant support - NULLABLE for backward compatibility
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "company_id")
+    @JoinColumn(name = "company_id", insertable = false, updatable = false)
     private Company company;
 
     @Column(nullable = false)
