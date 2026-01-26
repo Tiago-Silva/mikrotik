@@ -29,8 +29,8 @@ public class Contract {
     @Column(name = "service_plan_id", nullable = false)
     private Long servicePlanId;
 
-    @Column(name = "pppoe_credential_id", unique = true)
-    private Long pppoeCredentialId;
+    @Column(name = "pppoe_user_id", unique = true)
+    private Long pppoeUserId;
 
     @Column(name = "installation_address_id")
     private Long installationAddressId;
@@ -75,8 +75,8 @@ public class Contract {
     private ServicePlan servicePlan;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "pppoe_credential_id", insertable = false, updatable = false)
-    private PppoeCredential pppoeCredential;
+    @JoinColumn(name = "pppoe_user_id", insertable = false, updatable = false)
+    private PppoeUser pppoeUser;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "installation_address_id", insertable = false, updatable = false)
