@@ -142,41 +142,30 @@ CREATE TABLE pppoe_profiles (
     INDEX idx_mikrotik_server_id (mikrotik_server_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Credenciais PPPoE
-CREATE TABLE pppoe_credentials (
+-- Usuários PPPoE (consolidado com campos de credentials)
+CREATE TABLE pppoe_users (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     company_id BIGINT NOT NULL,
-    mikrotik_server_id BIGINT NOT NULL,
-    username VARCHAR(100) NOT NULL,
-    password VARCHAR(100) NOT NULL,
+    username VARCHAR(255) NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    email VARCHAR(255),
+    comment TEXT,
     mac_address VARCHAR(17),
     static_ip VARCHAR(45),
     status ENUM('ONLINE', 'OFFLINE', 'DISABLED') DEFAULT 'OFFLINE',
-    last_connection_at DATETIME,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (company_id) REFERENCES companies(id),
-    FOREIGN KEY (mikrotik_server_id) REFERENCES mikrotik_servers(id) ON DELETE CASCADE,
-    UNIQUE KEY uk_user_server (username, mikrotik_server_id),
-    INDEX idx_company_id (company_id),
-    INDEX idx_status (status)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Tabela antiga de Usuários PPPoE (compatibilidade)
-CREATE TABLE pppoe_users (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(255) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL,
-    email VARCHAR(255) NOT NULL,
-    comment TEXT,
     active BOOLEAN NOT NULL DEFAULT true,
+    last_connection_at DATETIME,
     pppoe_profile_id BIGINT NOT NULL,
     mikrotik_server_id BIGINT NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (company_id) REFERENCES companies(id),
     FOREIGN KEY (pppoe_profile_id) REFERENCES pppoe_profiles(id) ON DELETE CASCADE,
     FOREIGN KEY (mikrotik_server_id) REFERENCES mikrotik_servers(id) ON DELETE CASCADE,
+    UNIQUE KEY uk_user_server (username, mikrotik_server_id),
     INDEX idx_username (username),
+    INDEX idx_company_id (company_id),
+    INDEX idx_status (status),
     INDEX idx_pppoe_profile_id (pppoe_profile_id),
     INDEX idx_mikrotik_server_id (mikrotik_server_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -208,7 +197,7 @@ CREATE TABLE contracts (
     company_id BIGINT NOT NULL,
     customer_id BIGINT NOT NULL,
     service_plan_id BIGINT NOT NULL,
-    pppoe_credential_id BIGINT UNIQUE,
+    pppoe_user_id BIGINT UNIQUE,
     installation_address_id BIGINT,
     status ENUM('DRAFT', 'ACTIVE', 'SUSPENDED_FINANCIAL', 'SUSPENDED_REQUEST', 'CANCELED') DEFAULT 'DRAFT',
     billing_day INT NOT NULL DEFAULT 10,
@@ -221,7 +210,7 @@ CREATE TABLE contracts (
     FOREIGN KEY (company_id) REFERENCES companies(id),
     FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE RESTRICT,
     FOREIGN KEY (service_plan_id) REFERENCES service_plans(id) ON DELETE RESTRICT,
-    FOREIGN KEY (pppoe_credential_id) REFERENCES pppoe_credentials(id) ON DELETE SET NULL,
+    FOREIGN KEY (pppoe_user_id) REFERENCES pppoe_users(id) ON DELETE SET NULL,
     FOREIGN KEY (installation_address_id) REFERENCES addresses(id) ON DELETE SET NULL,
     INDEX idx_company_id (company_id),
     INDEX idx_customer_id (customer_id),
