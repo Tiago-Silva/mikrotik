@@ -31,8 +31,8 @@ public class ContractDTO {
     @Schema(description = "ID do plano de serviço", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
     private Long servicePlanId;
 
-    @Schema(description = "ID da credencial PPPoE", example = "1")
-    private Long pppoeCredentialId;
+    @Schema(description = "ID do usuário PPPoE", example = "1")
+    private Long pppoeUserId;
 
     @Schema(description = "ID do endereço de instalação", example = "1")
     private Long installationAddressId;
@@ -76,7 +76,7 @@ public class ContractDTO {
     @Schema(description = "Nome do plano de serviço")
     private String servicePlanName;
 
-    @Schema(description = "Username da credencial PPPoE")
+    @Schema(description = "Username do usuário PPPoE")
     private String pppoeUsername;
 
     @Schema(description = "Endereço de instalação completo")
@@ -101,7 +101,7 @@ public class ContractDTO {
                 .companyId(contract.getCompanyId())
                 .customerId(contract.getCustomerId())
                 .servicePlanId(contract.getServicePlanId())
-                .pppoeCredentialId(contract.getPppoeCredentialId())
+                .pppoeUserId(contract.getPppoeUserId())
                 .installationAddressId(contract.getInstallationAddressId())
                 .status(contract.getStatus())
                 .billingDay(contract.getBillingDay())
@@ -122,8 +122,8 @@ public class ContractDTO {
             builder.servicePlanName(contract.getServicePlan().getName());
         }
 
-        if (contract.getPppoeCredential() != null) {
-            builder.pppoeUsername(contract.getPppoeCredential().getUsername());
+        if (contract.getPppoeUser() != null) {
+            builder.pppoeUsername(contract.getPppoeUser().getUsername());
         }
 
         if (contract.getInstallationAddress() != null) {
@@ -146,7 +146,7 @@ public class ContractDTO {
                 .companyId(this.companyId)
                 .customerId(this.customerId)
                 .servicePlanId(this.servicePlanId)
-                .pppoeCredentialId(this.pppoeCredentialId)
+                .pppoeUserId(this.pppoeUserId)
                 .installationAddressId(this.installationAddressId)
                 .status(this.status)
                 .billingDay(this.billingDay)
