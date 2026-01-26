@@ -1,16 +1,22 @@
 package br.com.mikrotik.dto;
 
+import br.com.mikrotik.model.MikrotikServer;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class MikrotikServerDTO {
     private Long id;
+
+    private Long companyId;
 
     @NotBlank(message = "Nome é obrigatório")
     private String name;
@@ -30,4 +36,15 @@ public class MikrotikServerDTO {
     private String description;
 
     private Boolean active = true;
+
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime lastSyncAt;
+
+    private MikrotikServer.SyncStatus syncStatus;
+
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime createdAt;
+
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime updatedAt;
 }
