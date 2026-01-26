@@ -10,6 +10,7 @@ import br.com.mikrotik.model.PppoeUser;
 import br.com.mikrotik.repository.MikrotikServerRepository;
 import br.com.mikrotik.repository.PppoeProfileRepository;
 import br.com.mikrotik.repository.PppoeUserRepository;
+import br.com.mikrotik.util.CompanyContextHolder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -58,10 +59,14 @@ public class PppoeUserService {
         );
 
         PppoeUser user = new PppoeUser();
+        user.setCompanyId(server.getCompanyId());
         user.setUsername(dto.getUsername());
         user.setPassword(passwordEncoder.encode(dto.getPassword()));
         user.setEmail(dto.getEmail());
         user.setComment(dto.getComment());
+        user.setMacAddress(dto.getMacAddress());
+        user.setStaticIp(dto.getStaticIp());
+        user.setStatus(dto.getStatus() != null ? dto.getStatus() : PppoeUser.UserStatus.OFFLINE);
         user.setActive(dto.getActive() != null ? dto.getActive() : true);
         user.setProfile(profile);
         user.setMikrotikServer(server);
@@ -91,6 +96,17 @@ public class PppoeUserService {
                 .map(this::mapToDTO);
     }
 
+    public Page<PppoeUserDTO> getByStatus(String statusStr, Pageable pageable) {
+        try {
+            PppoeUser.UserStatus status = PppoeUser.UserStatus.valueOf(statusStr.toUpperCase());
+            Long companyId = CompanyContextHolder.getCompanyId();
+            return repository.findByCompanyIdAndStatus(companyId, status, pageable)
+                    .map(this::mapToDTO);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Status inválido: " + statusStr + ". Use: ONLINE, OFFLINE ou DISABLED");
+        }
+    }
+
     @Transactional
     public PppoeUserDTO update(Long id, PppoeUserDTO dto) {
         PppoeUser user = repository.findById(id)
@@ -101,6 +117,8 @@ public class PppoeUserService {
 
         user.setEmail(dto.getEmail());
         user.setComment(dto.getComment());
+        user.setMacAddress(dto.getMacAddress());
+        user.setStaticIp(dto.getStaticIp());
         user.setActive(dto.getActive());
         user.setProfile(profile);
         user.setUpdatedAt(LocalDateTime.now());
@@ -215,6 +233,7 @@ public class PppoeUserService {
 
                     // Criar novo usuário no banco
                     PppoeUser newUser = new PppoeUser();
+                    newUser.setCompanyId(server.getCompanyId());
                     newUser.setUsername(mikrotikUser.getUsername());
 
                     // Se a senha estiver disponível, usar; senão, usar padrão
@@ -302,15 +321,20 @@ public class PppoeUserService {
     }
 
     private PppoeUserDTO mapToDTO(PppoeUser user) {
-        return new PppoeUserDTO(
-                user.getId(),
-                user.getUsername(),
-                "", // Não retornar password por segurança
-                user.getEmail(),
-                user.getComment(),
-                user.getActive(),
-                user.getProfile().getId(),
-                user.getMikrotikServer().getId()
-        );
+        PppoeUserDTO dto = new PppoeUserDTO();
+        dto.setId(user.getId());
+        dto.setCompanyId(user.getCompanyId());
+        dto.setUsername(user.getUsername());
+        dto.setPassword(""); // Não retornar password por segurança
+        dto.setEmail(user.getEmail());
+        dto.setComment(user.getComment());
+        dto.setMacAddress(user.getMacAddress());
+        dto.setStaticIp(user.getStaticIp());
+        dto.setStatus(user.getStatus());
+        dto.setActive(user.getActive());
+        dto.setLastConnectionAt(user.getLastConnectionAt());
+        dto.setProfileId(user.getProfile().getId());
+        dto.setMikrotikServerId(user.getMikrotikServer().getId());
+        return dto;
     }
 }
