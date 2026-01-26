@@ -18,7 +18,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/users")
@@ -59,6 +58,16 @@ public class PppoeUserController {
     public ResponseEntity<Page<PppoeUserDTO>> getAll(
             @PageableDefault(size = 20, sort = "id", direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok(service.getAll(pageable));
+    }
+
+    @GetMapping("/status/{status}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @Operation(summary = "Listar usuários por status", description = "Retorna usuários filtrados por status (ONLINE, OFFLINE, DISABLED)")
+    public ResponseEntity<Page<PppoeUserDTO>> getByStatus(
+            @PathVariable String status,
+            @PageableDefault(size = 20, sort = "id", direction = Sort.Direction.DESC) Pageable pageable) {
+        log.info("Buscando usuários com status: {}", status);
+        return ResponseEntity.ok(service.getByStatus(status, pageable));
     }
 
     @PutMapping("/{id}")
