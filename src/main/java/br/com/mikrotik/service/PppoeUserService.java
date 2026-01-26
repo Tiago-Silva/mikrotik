@@ -15,7 +15,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,7 +31,6 @@ public class PppoeUserService {
     private final MikrotikServerRepository serverRepository;
     private final PppoeProfileRepository profileRepository;
     private final MikrotikSshService sshService;
-    private final PasswordEncoder passwordEncoder;
 
     @Transactional
     public PppoeUserDTO create(PppoeUserDTO dto) {
@@ -61,7 +59,7 @@ public class PppoeUserService {
         PppoeUser user = new PppoeUser();
         user.setCompanyId(server.getCompanyId());
         user.setUsername(dto.getUsername());
-        user.setPassword(passwordEncoder.encode(dto.getPassword()));
+        user.setPassword(dto.getPassword()); // Armazenar em texto plano (técnicos precisam visualizar)
         user.setEmail(dto.getEmail());
         user.setComment(dto.getComment());
         user.setMacAddress(dto.getMacAddress());
@@ -112,19 +110,55 @@ public class PppoeUserService {
         PppoeUser user = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário PPPoE não encontrado: " + id));
 
-        PppoeProfile profile = profileRepository.findById(dto.getProfileId())
+        PppoeProfile newProfile = profileRepository.findById(dto.getProfileId())
                 .orElseThrow(() -> new ResourceNotFoundException("Perfil PPPoE não encontrado"));
 
+        MikrotikServer server = user.getMikrotikServer();
+        boolean profileChanged = !user.getProfile().getId().equals(newProfile.getId());
+        boolean passwordChanged = dto.getPassword() != null && !dto.getPassword().isEmpty();
+
+        // 1. ATUALIZAR NO MIKROTIK SE NECESSÁRIO
+        if (profileChanged) {
+            log.info("Alterando perfil do usuário {} no Mikrotik: {} -> {}",
+                    user.getUsername(), user.getProfile().getName(), newProfile.getName());
+
+            sshService.changePppoeUserProfile(
+                    server.getIpAddress(),
+                    server.getPort(),
+                    server.getUsername(),
+                    server.getPassword(),
+                    user.getUsername(),
+                    newProfile.getName()
+            );
+        }
+
+        if (passwordChanged) {
+            log.info("Atualizando senha do usuário {} no Mikrotik", user.getUsername());
+
+            sshService.updatePppoeUserPassword(
+                    server.getIpAddress(),
+                    server.getPort(),
+                    server.getUsername(),
+                    server.getPassword(),
+                    user.getUsername(),
+                    dto.getPassword()
+            );
+
+            // Atualizar senha no banco (texto plano - técnicos precisam visualizar)
+            user.setPassword(dto.getPassword());
+        }
+
+        // 2. ATUALIZAR NO BANCO
         user.setEmail(dto.getEmail());
         user.setComment(dto.getComment());
         user.setMacAddress(dto.getMacAddress());
         user.setStaticIp(dto.getStaticIp());
         user.setActive(dto.getActive());
-        user.setProfile(profile);
+        user.setProfile(newProfile);
         user.setUpdatedAt(LocalDateTime.now());
 
         PppoeUser updated = repository.save(user);
-        log.info("Usuário PPPoE atualizado: {}", updated.getId());
+        log.info("Usuário PPPoE atualizado com sucesso: {} (Mikrotik + Banco)", updated.getId());
         return mapToDTO(updated);
     }
 
@@ -218,16 +252,39 @@ public class PppoeUserService {
             for (MikrotikPppoeUserDTO mikrotikUser : mikrotikUsers) {
                 try {
                     // Verificar se usuário já existe no banco
-                    Optional<PppoeUser> existingUser = repository.findByUsernameAndMikrotikServer(
+                    Optional<PppoeUser> existingUserOpt = repository.findByUsernameAndMikrotikServer(
                             mikrotikUser.getUsername(),
                             server
                     );
 
-                    if (existingUser.isPresent()) {
-                        // Usuário já existe, pular
-                        result.setSkippedUsers(result.getSkippedUsers() + 1);
-                        result.getSkippedUsernames().add(mikrotikUser.getUsername());
-                        log.debug("Usuário {} já existe no banco, pulando", mikrotikUser.getUsername());
+                    if (existingUserOpt.isPresent()) {
+                        // Usuário já existe - ATUALIZAR SENHA do Mikrotik
+                        PppoeUser existingUser = existingUserOpt.get();
+
+                        String mikrotikPassword = mikrotikUser.getPassword() != null ?
+                                mikrotikUser.getPassword() : "synced123";
+
+                        // Verificar se senha está criptografada (BCrypt) e precisa ser atualizada
+                        boolean needsPasswordUpdate = existingUser.getPassword() == null ||
+                                                     existingUser.getPassword().isEmpty() ||
+                                                     existingUser.getPassword().startsWith("$2a$") ||
+                                                     existingUser.getPassword().startsWith("$2b$");
+
+                        if (needsPasswordUpdate || !existingUser.getPassword().equals(mikrotikPassword)) {
+                            // Atualizar senha (em texto plano do Mikrotik)
+                            existingUser.setPassword(mikrotikPassword);
+                            existingUser.setUpdatedAt(LocalDateTime.now());
+                            repository.save(existingUser);
+
+                            result.setSkippedUsers(result.getSkippedUsers() + 1);
+                            result.getSkippedUsernames().add(mikrotikUser.getUsername() + " (senha atualizada)");
+                            log.info("✅ Usuário {} - senha sincronizada do Mikrotik: {}",
+                                    mikrotikUser.getUsername(), mikrotikPassword);
+                        } else {
+                            result.setSkippedUsers(result.getSkippedUsers() + 1);
+                            result.getSkippedUsernames().add(mikrotikUser.getUsername());
+                            log.debug("Usuário {} já existe com senha correta, pulando", mikrotikUser.getUsername());
+                        }
                         continue;
                     }
 
@@ -237,9 +294,10 @@ public class PppoeUserService {
                     newUser.setUsername(mikrotikUser.getUsername());
 
                     // Se a senha estiver disponível, usar; senão, usar padrão
+                    // Armazenar em texto plano (técnicos precisam visualizar)
                     String password = mikrotikUser.getPassword() != null ?
                             mikrotikUser.getPassword() : "synced123";
-                    newUser.setPassword(passwordEncoder.encode(password));
+                    newUser.setPassword(password);
 
                     // Email padrão baseado no username
                     newUser.setEmail(mikrotikUser.getUsername() + "@synced.local");
@@ -325,7 +383,7 @@ public class PppoeUserService {
         dto.setId(user.getId());
         dto.setCompanyId(user.getCompanyId());
         dto.setUsername(user.getUsername());
-        dto.setPassword(""); // Não retornar password por segurança
+        dto.setPassword(user.getPassword()); // Retornar senha (técnicos precisam visualizar)
         dto.setEmail(user.getEmail());
         dto.setComment(user.getComment());
         dto.setMacAddress(user.getMacAddress());
