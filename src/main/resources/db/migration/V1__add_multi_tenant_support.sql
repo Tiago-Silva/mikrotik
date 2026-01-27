@@ -17,6 +17,7 @@ CREATE TABLE companies (
     cnpj VARCHAR(18) NOT NULL UNIQUE,
     email VARCHAR(255),
     support_phone VARCHAR(20),
+    suspension_days INT DEFAULT 5 NOT NULL COMMENT 'Dias de tolerância após vencimento antes de suspender contrato automaticamente',
     active BOOLEAN DEFAULT TRUE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
