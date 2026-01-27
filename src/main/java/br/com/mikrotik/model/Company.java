@@ -36,6 +36,9 @@ public class Company {
     @Column(name = "support_phone", length = 20)
     private String supportPhone;
 
+    @Column(name = "suspension_days", nullable = false)
+    private Integer suspensionDays = 5;
+
     @Column(nullable = false)
     private Boolean active = true;
 
