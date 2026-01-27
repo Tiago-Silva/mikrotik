@@ -1,9 +1,12 @@
 package br.com.mikrotik.job;
 
 import br.com.mikrotik.dto.InvoiceDTO;
+import br.com.mikrotik.model.Company;
 import br.com.mikrotik.model.Contract;
 import br.com.mikrotik.repository.CompanyRepository;
 import br.com.mikrotik.repository.ContractRepository;
+import br.com.mikrotik.repository.InvoiceRepository;
+import br.com.mikrotik.service.ContractService;
 import br.com.mikrotik.service.InvoiceService;
 import br.com.mikrotik.util.CompanyContextHolder;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +28,9 @@ public class InvoiceBillingJob {
 
     private final ContractRepository contractRepository;
     private final CompanyRepository companyRepository;
+    private final InvoiceRepository invoiceRepository;
     private final InvoiceService invoiceService;
+    private final ContractService contractService;
 
     /**
      * Job que roda todo dia 1º de cada mês às 01:00 AM
@@ -184,6 +189,120 @@ public class InvoiceBillingJob {
 
             log.info("Empresa {}: {} faturas marcadas como vencidas", companyId, count);
 
+        } finally {
+            CompanyContextHolder.clear();
+        }
+    }
+
+    /**
+     * Job que roda diariamente às 03:00 AM
+     * Suspende automaticamente contratos com faturas vencidas há X dias
+     * X = suspension_days configurado na empresa (padrão: 5 dias)
+     */
+    @Scheduled(cron = "0 0 3 * * ?") // Todo dia às 03:00
+    public void suspendOverdueContracts() {
+        log.info("==========================================================");
+        log.info("SUSPENSÃO AUTOMÁTICA DE CONTRATOS POR INADIMPLÊNCIA");
+        log.info("Data/Hora: {}", LocalDateTime.now());
+        log.info("==========================================================");
+
+        try {
+            companyRepository.findAll().forEach(company -> {
+                if (company.getActive()) {
+                    suspendOverdueContractsForCompany(company);
+                }
+            });
+
+            log.info("==========================================================");
+            log.info("SUSPENSÃO AUTOMÁTICA CONCLUÍDA");
+            log.info("==========================================================");
+        } catch (Exception e) {
+            log.error("ERRO ao executar suspensão automática: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Suspende contratos com faturas vencidas de uma empresa
+     */
+    private void suspendOverdueContractsForCompany(Company company) {
+        Long companyId = company.getId();
+        Integer suspensionDays = company.getSuspensionDays() != null ? company.getSuspensionDays() : 5;
+
+        log.info("----------------------------------------------------------");
+        log.info("Processando empresa: {} (ID: {})", company.getName(), companyId);
+        log.info("Dias de tolerância configurados: {} dias", suspensionDays);
+        log.info("----------------------------------------------------------");
+
+        CompanyContextHolder.setCompanyId(companyId);
+
+        try {
+            LocalDate today = LocalDate.now();
+            LocalDate suspensionDate = today.minusDays(suspensionDays);
+
+            log.info("Data atual: {}", today);
+            log.info("Data limite para suspensão: {} (faturas vencidas até esta data serão suspensas)", suspensionDate);
+
+            // Buscar contratos com faturas vencidas há X dias ou mais
+            List<Long> contractIdsToSuspend = invoiceRepository.findContractIdsForSuspension(companyId, suspensionDate);
+
+            log.info("Encontrados {} contratos para suspensão", contractIdsToSuspend.size());
+
+            int successCount = 0;
+            int errorCount = 0;
+            int alreadySuspendedCount = 0;
+
+            for (Long contractId : contractIdsToSuspend) {
+                try {
+                    // Buscar contrato para verificar status atual
+                    Contract contract = contractRepository.findByIdAndCompanyId(contractId, companyId)
+                            .orElse(null);
+
+                    if (contract == null) {
+                        log.warn("  ⚠️  Contrato {} não encontrado", contractId);
+                        errorCount++;
+                        continue;
+                    }
+
+                    // Verificar se já está suspenso
+                    if (contract.getStatus() == Contract.ContractStatus.SUSPENDED_FINANCIAL) {
+                        log.debug("  ℹ️  Contrato {} já está suspenso - pulando", contractId);
+                        alreadySuspendedCount++;
+                        continue;
+                    }
+
+                    // Verificar se está ativo (só suspende contratos ativos)
+                    if (contract.getStatus() != Contract.ContractStatus.ACTIVE) {
+                        log.debug("  ℹ️  Contrato {} não está ativo (status: {}) - pulando",
+                                contractId, contract.getStatus());
+                        continue;
+                    }
+
+                    // Suspender contrato (já bloqueia no Mikrotik automaticamente)
+                    log.info("  🔒 Suspendendo contrato {} - Cliente: {}",
+                            contractId,
+                            contract.getCustomer() != null ? contract.getCustomer().getName() : "N/A");
+
+                    contractService.suspendFinancial(contractId);
+                    successCount++;
+
+                    log.info("  ✅ Contrato {} suspenso e bloqueado no Mikrotik com sucesso", contractId);
+
+                } catch (Exception e) {
+                    errorCount++;
+                    log.error("  ❌ Erro ao suspender contrato {}: {}", contractId, e.getMessage());
+                }
+            }
+
+            log.info("----------------------------------------------------------");
+            log.info("Empresa {}: Resumo da suspensão automática", company.getName());
+            log.info("  • Contratos para processar: {}", contractIdsToSuspend.size());
+            log.info("  • ✅ Suspensos com sucesso: {}", successCount);
+            log.info("  • ℹ️  Já estavam suspensos: {}", alreadySuspendedCount);
+            log.info("  • ❌ Erros: {}", errorCount);
+            log.info("----------------------------------------------------------");
+
+        } catch (Exception e) {
+            log.error("ERRO ao processar empresa {}: {}", companyId, e.getMessage(), e);
         } finally {
             CompanyContextHolder.clear();
         }
