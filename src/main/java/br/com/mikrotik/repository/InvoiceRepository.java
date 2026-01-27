@@ -57,4 +57,12 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
                                 @Param("status") Invoice.InvoiceStatus status,
                                 @Param("month") LocalDate month,
                                 Pageable pageable);
+
+    // Buscar contratos com faturas vencidas há X dias ou mais para suspensão automática
+    @Query("SELECT DISTINCT i.contractId FROM Invoice i " +
+           "WHERE i.companyId = :companyId " +
+           "AND i.status = 'OVERDUE' " +
+           "AND i.dueDate <= :suspensionDate")
+    List<Long> findContractIdsForSuspension(@Param("companyId") Long companyId,
+                                            @Param("suspensionDate") LocalDate suspensionDate);
 }
