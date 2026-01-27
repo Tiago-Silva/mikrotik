@@ -34,6 +34,7 @@ public class DataInitializationConfig {
                 defaultCompany.setCnpj("00.000.000/0001-00");
                 defaultCompany.setEmail("admin@default.com");
                 defaultCompany.setSupportPhone("(00) 0000-0000");
+                defaultCompany.setSuspensionDays(5);
                 defaultCompany.setActive(true);
 
                 defaultCompany = companyRepository.save(defaultCompany);
