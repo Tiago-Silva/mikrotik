@@ -37,6 +37,8 @@ public class CompanyDTO {
              message = "Telefone deve estar no formato (XX) XXXXX-XXXX")
     private String supportPhone;
 
+    private Integer suspensionDays;
+
     private Boolean active;
 
     private LocalDateTime createdAt;
