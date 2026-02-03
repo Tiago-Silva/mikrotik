@@ -22,18 +22,21 @@ import java.time.LocalDateTime;
 public class MikrotikServerService {
 
     private final MikrotikServerRepository repository;
-    private final MikrotikSshService sshService;
+    private final MikrotikApiService apiService; // Usar API ao invés de SSH
     private final CompanyRepository companyRepository;
 
     @Transactional
     public MikrotikServerDTO create(MikrotikServerDTO dto) {
-        // Testar conexão antes de salvar
-        sshService.testConnection(dto.getIpAddress(), dto.getPort(), dto.getUsername(), dto.getPassword());
+        log.info("Criando novo servidor Mikrotik: {}", dto.getName());
+
+        // Testar conexão via API antes de salvar
+        apiService.testConnection(dto.getIpAddress(), dto.getApiPort(), dto.getUsername(), dto.getPassword());
 
         MikrotikServer server = new MikrotikServer();
         server.setName(dto.getName());
         server.setIpAddress(dto.getIpAddress());
         server.setPort(dto.getPort());
+        server.setApiPort(dto.getApiPort() != null ? dto.getApiPort() : 8728);
         server.setUsername(dto.getUsername());
         server.setPassword(dto.getPassword());
         server.setDescription(dto.getDescription());
@@ -92,16 +95,17 @@ public class MikrotikServerService {
         MikrotikServer server = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Servidor Mikrotik não encontrado: " + id));
 
-        // Se credenciais mudaram, testar nova conexão
+        // Se credenciais mudaram, testar nova conexão via API
         if (!server.getIpAddress().equals(dto.getIpAddress()) ||
             !server.getUsername().equals(dto.getUsername()) ||
             !server.getPassword().equals(dto.getPassword())) {
-            sshService.testConnection(dto.getIpAddress(), dto.getPort(), dto.getUsername(), dto.getPassword());
+            apiService.testConnection(dto.getIpAddress(), dto.getApiPort(), dto.getUsername(), dto.getPassword());
         }
 
         server.setName(dto.getName());
         server.setIpAddress(dto.getIpAddress());
         server.setPort(dto.getPort());
+        server.setApiPort(dto.getApiPort() != null ? dto.getApiPort() : 8728);
         server.setUsername(dto.getUsername());
         server.setPassword(dto.getPassword());
         server.setDescription(dto.getDescription());
@@ -124,7 +128,7 @@ public class MikrotikServerService {
     public boolean testConnection(Long id) {
         MikrotikServer server = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Servidor Mikrotik não encontrado: " + id));
-        return sshService.testConnection(server.getIpAddress(), server.getPort(), server.getUsername(), server.getPassword());
+        return apiService.testConnection(server.getIpAddress(), server.getApiPort(), server.getUsername(), server.getPassword());
     }
 
     private MikrotikServerDTO mapToDTO(MikrotikServer server) {
@@ -134,6 +138,7 @@ public class MikrotikServerService {
         dto.setName(server.getName());
         dto.setIpAddress(server.getIpAddress());
         dto.setPort(server.getPort());
+        dto.setApiPort(server.getApiPort());
         dto.setUsername(server.getUsername());
         dto.setPassword(server.getPassword());
         dto.setDescription(server.getDescription());
