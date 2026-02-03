@@ -28,7 +28,7 @@ public class ContractService {
     private final ServicePlanRepository servicePlanRepository;
     private final PppoeUserRepository pppoeUserRepository;
     private final AddressRepository addressRepository;
-    private final MikrotikSshService mikrotikSshService;
+    private final MikrotikApiService mikrotikApiService; // API service for better performance
     private final PasswordEncoder passwordEncoder;
 
     /**
@@ -363,13 +363,14 @@ public class ContractService {
             log.info("Usuário PPPoE encontrado: {}", pppoeUser.getUsername());
 
             MikrotikServer server = pppoeUser.getMikrotikServer();
-            log.info("Servidor Mikrotik: {} ({}:{})", server.getName(), server.getIpAddress(), server.getPort());
+            log.info("Servidor Mikrotik: {} ({}:{}) - API Port: {}",
+                    server.getName(), server.getIpAddress(), server.getPort(), server.getApiPort());
 
-            // 1. Alterar perfil para "BLOQUEADO"
-            log.info(">>> PASSO 1: Alterando perfil para 'BLOQUEADO' <<<");
-            mikrotikSshService.changePppoeUserProfile(
+            // 1. Alterar perfil para "BLOQUEADO" via API
+            log.info(">>> PASSO 1: Alterando perfil para 'BLOQUEADO' via API <<<");
+            mikrotikApiService.changePppoeUserProfile(
                     server.getIpAddress(),
-                    server.getPort(),
+                    server.getApiPort(),
                     server.getUsername(),
                     server.getPassword(),
                     pppoeUser.getUsername(),
@@ -377,11 +378,11 @@ public class ContractService {
             );
             log.info("✅ Perfil alterado com sucesso no Mikrotik");
 
-            // 2. Desconectar usuário ativo
-            log.info(">>> PASSO 2: Desconectando usuário ativo <<<");
-            mikrotikSshService.disconnectActivePppoeUser(
+            // 2. Desconectar usuário ativo via API
+            log.info(">>> PASSO 2: Desconectando usuário ativo via API <<<");
+            mikrotikApiService.disconnectActivePppoeUser(
                     server.getIpAddress(),
-                    server.getPort(),
+                    server.getApiPort(),
                     server.getUsername(),
                     server.getPassword(),
                     pppoeUser.getUsername()
@@ -435,10 +436,10 @@ public class ContractService {
 
             String originalProfile = servicePlan.getPppoeProfile().getName();
 
-            // 1. Restaurar perfil original
-            mikrotikSshService.changePppoeUserProfile(
+            // 1. Restaurar perfil original via API
+            mikrotikApiService.changePppoeUserProfile(
                     server.getIpAddress(),
-                    server.getPort(),
+                    server.getApiPort(),
                     server.getUsername(),
                     server.getPassword(),
                     pppoeUser.getUsername(),
@@ -484,13 +485,14 @@ public class ContractService {
             log.info("Usuário PPPoE encontrado: {}", pppoeUser.getUsername());
 
             MikrotikServer server = pppoeUser.getMikrotikServer();
-            log.info("Servidor Mikrotik: {} ({}:{})", server.getName(), server.getIpAddress(), server.getPort());
+            log.info("Servidor Mikrotik: {} ({}:{}) - API Port: {}",
+                    server.getName(), server.getIpAddress(), server.getPort(), server.getApiPort());
 
-            // 1. Deletar do Mikrotik
-            log.info(">>> DELETANDO USUÁRIO DO MIKROTIK <<<");
-            mikrotikSshService.deletePppoeUser(
+            // 1. Deletar do Mikrotik via API
+            log.info(">>> DELETANDO USUÁRIO DO MIKROTIK VIA API <<<");
+            mikrotikApiService.deletePppoeUser(
                     server.getIpAddress(),
-                    server.getPort(),
+                    server.getApiPort(),
                     server.getUsername(),
                     server.getPassword(),
                     pppoeUser.getUsername()
@@ -585,11 +587,11 @@ public class ContractService {
                     enderecoCompleto.isEmpty() ? "Endereço não informado" : enderecoCompleto);
             log.info("Comentário: {}", comentario);
 
-            // 1. Criar no Mikrotik COM endereço no comentário
-            log.info(">>> CRIANDO USUÁRIO NO MIKROTIK <<<");
-            mikrotikSshService.createPppoeUserWithComment(
+            // 1. Criar no Mikrotik via API COM endereço no comentário
+            log.info(">>> CRIANDO USUÁRIO NO MIKROTIK VIA API <<<");
+            mikrotikApiService.createPppoeUserWithComment(
                     server.getIpAddress(),
-                    server.getPort(),
+                    server.getApiPort(),
                     server.getUsername(),
                     server.getPassword(),
                     username,
