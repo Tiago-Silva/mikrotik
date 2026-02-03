@@ -26,18 +26,18 @@ public class PppoeProfileService {
 
     private final PppoeProfileRepository repository;
     private final MikrotikServerRepository serverRepository;
-    private final MikrotikSshService sshService;
+    private final MikrotikApiService apiService; // API service for better performance
 
     @Transactional
     public PppoeProfileDTO create(PppoeProfileDTO dto) {
         MikrotikServer server = serverRepository.findById(dto.getMikrotikServerId())
                 .orElseThrow(() -> new ResourceNotFoundException("Servidor Mikrotik não encontrado"));
 
-        // 1. CRIAR NO MIKROTIK PRIMEIRO
-        log.info("Criando perfil PPPoE no Mikrotik e no banco de dados");
-        sshService.createPppoeProfile(
+        // 1. CRIAR NO MIKROTIK VIA API PRIMEIRO
+        log.info("Criando perfil PPPoE no Mikrotik via API e no banco de dados");
+        apiService.createPppoeProfile(
                 server.getIpAddress(),
-                server.getPort(),
+                server.getApiPort(),
                 server.getUsername(),
                 server.getPassword(),
                 dto.getName(),
@@ -90,11 +90,11 @@ public class PppoeProfileService {
         String oldName = profile.getName();
         MikrotikServer server = profile.getMikrotikServer();
 
-        // 1. ATUALIZAR NO MIKROTIK PRIMEIRO
-        log.info("Atualizando perfil PPPoE no Mikrotik e no banco de dados");
-        sshService.updatePppoeProfile(
+        // 1. ATUALIZAR NO MIKROTIK VIA API PRIMEIRO
+        log.info("Atualizando perfil PPPoE no Mikrotik via API e no banco de dados");
+        apiService.updatePppoeProfile(
                 server.getIpAddress(),
-                server.getPort(),
+                server.getApiPort(),
                 server.getUsername(),
                 server.getPassword(),
                 oldName,  // Nome antigo
@@ -126,11 +126,11 @@ public class PppoeProfileService {
 
         MikrotikServer server = profile.getMikrotikServer();
 
-        // 1. DELETAR DO MIKROTIK PRIMEIRO
-        log.info("Deletando perfil PPPoE do Mikrotik e do banco de dados");
-        sshService.deletePppoeProfile(
+        // 1. DELETAR DO MIKROTIK VIA API PRIMEIRO
+        log.info("Deletando perfil PPPoE do Mikrotik via API e do banco de dados");
+        apiService.deletePppoeProfile(
                 server.getIpAddress(),
-                server.getPort(),
+                server.getApiPort(),
                 server.getUsername(),
                 server.getPassword(),
                 profile.getName()
@@ -152,10 +152,11 @@ public class PppoeProfileService {
         log.info("Iniciando sincronização de profiles do servidor {} (ID: {})", server.getName(), serverId);
 
         try {
-            // Buscar profiles do Mikrotik
-            List<MikrotikPppoeProfileDTO> mikrotikProfiles = sshService.getPppoeProfilesStructured(
+            // Buscar profiles do Mikrotik via API (✅ Comentários completos!)
+            log.info("Usando MikrotikApiService para sincronização via porta API: {}", server.getApiPort());
+            List<MikrotikPppoeProfileDTO> mikrotikProfiles = apiService.getPppoeProfilesStructured(
                     server.getIpAddress(),
-                    server.getPort(),
+                    server.getApiPort(),
                     server.getUsername(),
                     server.getPassword()
             );
