@@ -93,6 +93,12 @@
             <artifactId>jsch</artifactId>
             <version>0.1.55</version>
         </dependency>
+        <!-- Mikrotik RouterOS API para comunicação via API -->
+        <dependency>
+            <groupId>me.legrange</groupId>
+            <artifactId>mikrotik</artifactId>
+            <version>3.0.8</version>
+        </dependency>
         <!-- Validation -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
