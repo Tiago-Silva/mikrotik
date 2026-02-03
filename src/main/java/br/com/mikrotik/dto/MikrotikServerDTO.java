@@ -27,6 +27,8 @@ public class MikrotikServerDTO {
     @NotNull(message = "Port é obrigatório")
     private Integer port;
 
+    private Integer apiPort = 8728; // Porta API do Mikrotik (8728 sem SSL, 8729 com SSL)
+
     @NotBlank(message = "Username é obrigatório")
     private String username;
 
