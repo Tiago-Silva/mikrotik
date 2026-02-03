@@ -30,7 +30,7 @@ public class PppoeUserService {
     private final PppoeUserRepository repository;
     private final MikrotikServerRepository serverRepository;
     private final PppoeProfileRepository profileRepository;
-    private final MikrotikSshService sshService;
+    private final MikrotikApiService apiService; // API service for better performance
 
     @Transactional
     public PppoeUserDTO create(PppoeUserDTO dto) {
@@ -46,9 +46,10 @@ public class PppoeUserService {
         }
 
         // Criar usuário no Mikrotik
-        sshService.createPppoeUser(
+        // 1. CRIAR NO MIKROTIK VIA API
+        apiService.createPppoeUser(
                 server.getIpAddress(),
-                server.getPort(),
+                server.getApiPort(),
                 server.getUsername(),
                 server.getPassword(),
                 dto.getUsername(),
@@ -117,14 +118,14 @@ public class PppoeUserService {
         boolean profileChanged = !user.getProfile().getId().equals(newProfile.getId());
         boolean passwordChanged = dto.getPassword() != null && !dto.getPassword().isEmpty();
 
-        // 1. ATUALIZAR NO MIKROTIK SE NECESSÁRIO
+        // 1. ATUALIZAR NO MIKROTIK VIA API SE NECESSÁRIO
         if (profileChanged) {
-            log.info("Alterando perfil do usuário {} no Mikrotik: {} -> {}",
+            log.info("Alterando perfil do usuário {} no Mikrotik via API: {} -> {}",
                     user.getUsername(), user.getProfile().getName(), newProfile.getName());
 
-            sshService.changePppoeUserProfile(
+            apiService.changePppoeUserProfile(
                     server.getIpAddress(),
-                    server.getPort(),
+                    server.getApiPort(),
                     server.getUsername(),
                     server.getPassword(),
                     user.getUsername(),
@@ -133,11 +134,11 @@ public class PppoeUserService {
         }
 
         if (passwordChanged) {
-            log.info("Atualizando senha do usuário {} no Mikrotik", user.getUsername());
+            log.info("Atualizando senha do usuário {} no Mikrotik via API", user.getUsername());
 
-            sshService.updatePppoeUserPassword(
+            apiService.updatePppoeUserPassword(
                     server.getIpAddress(),
-                    server.getPort(),
+                    server.getApiPort(),
                     server.getUsername(),
                     server.getPassword(),
                     user.getUsername(),
@@ -167,10 +168,10 @@ public class PppoeUserService {
         PppoeUser user = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário PPPoE não encontrado: " + id));
 
-        // Deletar usuário do Mikrotik
-        sshService.deletePppoeUser(
+        // Deletar usuário do Mikrotik via API
+        apiService.deletePppoeUser(
                 user.getMikrotikServer().getIpAddress(),
-                user.getMikrotikServer().getPort(),
+                user.getMikrotikServer().getApiPort(),
                 user.getMikrotikServer().getUsername(),
                 user.getMikrotikServer().getPassword(),
                 user.getUsername()
@@ -185,9 +186,9 @@ public class PppoeUserService {
         PppoeUser user = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário PPPoE não encontrado: " + id));
 
-        sshService.disablePppoeUser(
+        apiService.disablePppoeUser(
                 user.getMikrotikServer().getIpAddress(),
-                user.getMikrotikServer().getPort(),
+                user.getMikrotikServer().getApiPort(),
                 user.getMikrotikServer().getUsername(),
                 user.getMikrotikServer().getPassword(),
                 user.getUsername()
@@ -204,9 +205,9 @@ public class PppoeUserService {
         PppoeUser user = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário PPPoE não encontrado: " + id));
 
-        sshService.enablePppoeUser(
+        apiService.enablePppoeUser(
                 user.getMikrotikServer().getIpAddress(),
-                user.getMikrotikServer().getPort(),
+                user.getMikrotikServer().getApiPort(),
                 user.getMikrotikServer().getUsername(),
                 user.getMikrotikServer().getPassword(),
                 user.getUsername()
@@ -239,10 +240,11 @@ public class PppoeUserService {
         log.info("Iniciando sincronização de usuários do servidor {} (ID: {})", server.getName(), serverId);
 
         try {
-            // Buscar usuários do Mikrotik
-            List<MikrotikPppoeUserDTO> mikrotikUsers = sshService.getPppoeUsersStructured(
+            // Buscar usuários do Mikrotik via API (✅ Comentários completos!)
+            log.info("Usando MikrotikApiService para sincronização via porta API: {}", server.getApiPort());
+            List<MikrotikPppoeUserDTO> mikrotikUsers = apiService.getPppoeUsersStructured(
                     server.getIpAddress(),
-                    server.getPort(),
+                    server.getApiPort(),
                     server.getUsername(),
                     server.getPassword()
             );
