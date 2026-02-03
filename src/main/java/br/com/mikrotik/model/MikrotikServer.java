@@ -28,11 +28,14 @@ public class MikrotikServer {
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false)
+    @Column(nullable = false, name = "ip_address")
     private String ipAddress;
 
-    @Column(nullable = false)
-    private Integer port;
+    @Column(nullable = false, name = "ssh_port")
+    private Integer port = 22; // Porta SSH padrão
+
+    @Column(name = "api_port")
+    private Integer apiPort = 8728; // Porta API padrão do Mikrotik
 
     @Column(nullable = false)
     private String username;
