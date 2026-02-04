@@ -106,6 +106,51 @@ public class PppoeUserService {
         }
     }
 
+    public Page<PppoeUserDTO> getByProfile(Long profileId, Pageable pageable) {
+        Long companyId = CompanyContextHolder.getCompanyId();
+        log.info("Buscando usuários PPPoE por perfil ID: {} para company: {}", profileId, companyId);
+
+        // Validar se o perfil existe
+        profileRepository.findById(profileId)
+                .orElseThrow(() -> new ResourceNotFoundException("Perfil PPPoE não encontrado: " + profileId));
+
+        return repository.findByCompanyIdAndProfileId(companyId, profileId, pageable)
+                .map(this::mapToDTO);
+    }
+
+    public Page<PppoeUserDTO> searchUsers(String searchTerm, Pageable pageable) {
+        Long companyId = CompanyContextHolder.getCompanyId();
+        log.info("Buscando usuários PPPoE com termo: '{}' para company: {}", searchTerm, companyId);
+
+        if (searchTerm == null || searchTerm.trim().isEmpty()) {
+            throw new IllegalArgumentException("Termo de busca não pode ser vazio");
+        }
+
+        String term = searchTerm.trim();
+        return repository.findByCompanyIdAndUsernameContainingIgnoreCaseOrCommentContainingIgnoreCase(
+                companyId, term, term, pageable)
+                .map(this::mapToDTO);
+    }
+
+    public Page<PppoeUserDTO> searchUsersByProfile(Long profileId, String searchTerm, Pageable pageable) {
+        Long companyId = CompanyContextHolder.getCompanyId();
+        log.info("Buscando usuários PPPoE por perfil {} com termo: '{}' para company: {}",
+                profileId, searchTerm, companyId);
+
+        // Validar se o perfil existe
+        profileRepository.findById(profileId)
+                .orElseThrow(() -> new ResourceNotFoundException("Perfil PPPoE não encontrado: " + profileId));
+
+        if (searchTerm == null || searchTerm.trim().isEmpty()) {
+            throw new IllegalArgumentException("Termo de busca não pode ser vazio");
+        }
+
+        String term = searchTerm.trim();
+        return repository.findByCompanyIdAndProfileIdAndUsernameContainingIgnoreCaseOrCompanyIdAndProfileIdAndCommentContainingIgnoreCase(
+                companyId, profileId, term, companyId, profileId, term, pageable)
+                .map(this::mapToDTO);
+    }
+
     @Transactional
     public PppoeUserDTO update(Long id, PppoeUserDTO dto) {
         PppoeUser user = repository.findById(id)
