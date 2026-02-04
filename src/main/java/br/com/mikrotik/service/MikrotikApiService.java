@@ -109,7 +109,7 @@ public class MikrotikApiService {
             log.info("Alterando perfil do usuário {} para {}", pppoeUsername, newProfile);
             connection = connect(host, username, password);
 
-            String id = findIdByName(connection, "/ppp/secret/print", pppoeUsername);
+            String id = findIdByNameListAll(connection, "/ppp/secret/print", pppoeUsername);
 
             if (id != null) {
                 // CORREÇÃO: numbers ao invés de .id
@@ -368,6 +368,23 @@ public class MikrotikApiService {
 
         if (results != null && !results.isEmpty()) {
             return results.get(0).get(".id");
+        }
+        return null;
+    }
+
+    private String findIdByNameListAll(ApiConnection connection, String printCommand, String name) throws Exception {
+        // ABORDAGEM SEGURA: Listar tudo e filtrar no Java.
+        // Isso evita erros de sintaxe de query (where/?) que variam entre versões da lib.
+        List<Map<String, String>> results = connection.execute(printCommand);
+
+        if (results != null) {
+            for (Map<String, String> item : results) {
+                // Compara o nome que buscamos com o nome no Map
+                // Usamos equalsIgnoreCase para ser mais robusto
+                if (name.equalsIgnoreCase(item.get("name"))) {
+                    return item.get(".id");
+                }
+            }
         }
         return null;
     }
