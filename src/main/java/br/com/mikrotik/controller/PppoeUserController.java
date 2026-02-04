@@ -70,6 +70,46 @@ public class PppoeUserController {
         return ResponseEntity.ok(service.getByStatus(status, pageable));
     }
 
+    @GetMapping("/profile/{profileId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @Operation(
+        summary = "Listar usuários por perfil",
+        description = "Retorna todos os usuários vinculados a um perfil PPPoE específico com paginação"
+    )
+    public ResponseEntity<Page<PppoeUserDTO>> getByProfile(
+            @PathVariable Long profileId,
+            @PageableDefault(size = 20, sort = "username", direction = Sort.Direction.ASC) Pageable pageable) {
+        log.info("GET /api/users/profile/{}", profileId);
+        return ResponseEntity.ok(service.getByProfile(profileId, pageable));
+    }
+
+    @GetMapping("/search")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @Operation(
+        summary = "Buscar usuários",
+        description = "Busca usuários por username ou comentário (case-insensitive). Use o parâmetro 'q' para o termo de busca."
+    )
+    public ResponseEntity<Page<PppoeUserDTO>> searchUsers(
+            @RequestParam String q,
+            @PageableDefault(size = 20, sort = "username", direction = Sort.Direction.ASC) Pageable pageable) {
+        log.info("GET /api/users/search?q={}", q);
+        return ResponseEntity.ok(service.searchUsers(q, pageable));
+    }
+
+    @GetMapping("/profile/{profileId}/search")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @Operation(
+        summary = "Buscar usuários em um perfil específico",
+        description = "Busca usuários por username ou comentário dentro de um perfil PPPoE específico (case-insensitive)"
+    )
+    public ResponseEntity<Page<PppoeUserDTO>> searchUsersByProfile(
+            @PathVariable Long profileId,
+            @RequestParam String q,
+            @PageableDefault(size = 20, sort = "username", direction = Sort.Direction.ASC) Pageable pageable) {
+        log.info("GET /api/users/profile/{}/search?q={}", profileId, q);
+        return ResponseEntity.ok(service.searchUsersByProfile(profileId, q, pageable));
+    }
+
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
     @Operation(summary = "Atualizar usuário", description = "Modificar dados de um usuário existente")
