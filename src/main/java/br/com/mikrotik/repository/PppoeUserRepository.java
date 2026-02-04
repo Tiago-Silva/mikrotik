@@ -28,6 +28,19 @@ public interface PppoeUserRepository extends JpaRepository<PppoeUser, Long> {
     List<PppoeUser> findByStatus(PppoeUser.UserStatus status);
     Page<PppoeUser> findByCompanyIdAndStatus(Long companyId, PppoeUser.UserStatus status, Pageable pageable);
 
+    // Filtros por perfil
+    Page<PppoeUser> findByCompanyIdAndProfileId(Long companyId, Long profileId, Pageable pageable);
+
+    // Busca por username ou comment
+    Page<PppoeUser> findByCompanyIdAndUsernameContainingIgnoreCaseOrCommentContainingIgnoreCase(
+            Long companyId, String username, String comment, Pageable pageable);
+
+    // Busca combinada: por perfil + username/comment
+    Page<PppoeUser> findByCompanyIdAndProfileIdAndUsernameContainingIgnoreCaseOrCompanyIdAndProfileIdAndCommentContainingIgnoreCase(
+            Long companyId1, Long profileId1, String username,
+            Long companyId2, Long profileId2, String comment,
+            Pageable pageable);
+
     // Contadores
     Long countByActiveTrue();
     Long countByCompanyId(Long companyId);
