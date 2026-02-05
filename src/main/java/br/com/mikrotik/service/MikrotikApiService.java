@@ -3,6 +3,8 @@ package br.com.mikrotik.service;
 import br.com.mikrotik.dto.MikrotikPppoeProfileDTO;
 import br.com.mikrotik.dto.MikrotikPppoeUserDTO;
 import br.com.mikrotik.exception.MikrotikConnectionException;
+import br.com.mikrotik.model.PppoeProfile;
+import br.com.mikrotik.model.PppoeUser;
 import lombok.extern.slf4j.Slf4j;
 import me.legrange.mikrotik.ApiConnection;
 import org.springframework.stereotype.Service;
@@ -78,7 +80,7 @@ public class MikrotikApiService {
         ApiConnection connection = null;
         try {
             connection = connect(host, username, password);
-            String id = findIdByName(connection, "/ppp/secret/print", pppoeUsername);
+            String id = findIdByNameListAll(connection, "/ppp/secret/print", pppoeUsername);
 
             if (id != null) {
                 // CORREÇÃO: numbers ao invés de .id
@@ -100,6 +102,46 @@ public class MikrotikApiService {
 
     public void enablePppoeUser(String host, Integer apiPort, String username, String password, String pppoeUsername) {
         executeToggleCommand(host, username, password, "/ppp/secret", pppoeUsername, "enable");
+    }
+
+    public void changePppoeUserAll(String host, Integer apiPort, String username, String password,
+                                   PppoeUser pppoeUser, PppoeProfile newProfile) {
+
+        ApiConnection connection = null;
+        try {
+            log.info("Alterando dados completos do usuário: {}", pppoeUser.getUsername());
+            connection = connect(host, username, password);
+
+            String id = findIdByNameListAll(connection, "/ppp/secret/print", pppoeUser.getUsername());
+
+            if (id != null) {
+                StringBuilder cmd = new StringBuilder("/ppp/secret/set numbers=" + id);
+
+                // Adiciona apenas os campos que foram informados no DTO
+                if (pppoeUser.getUsername() != null && !pppoeUser.getUsername().isEmpty()) {
+                    cmd.append(" name=").append(formatParam(pppoeUser.getUsername()));
+                }
+                if (pppoeUser.getPassword() != null && !pppoeUser.getPassword().isEmpty()) {
+                    cmd.append(" password=").append(formatParam(pppoeUser.getPassword()));
+                }
+                if (newProfile != null) {
+                    cmd.append(" profile=").append(formatParam(newProfile.getName()));
+                }
+                if (pppoeUser.getComment() != null) {
+                    String safeComment = sanitizeComment(pppoeUser.getComment());
+                    cmd.append(" comment=").append(formatParam(safeComment));
+                }
+
+                connection.execute(cmd.toString());
+                log.info("✅ Dados do usuário alterados com sucesso em uma única operação");
+                } else {
+                throw new MikrotikConnectionException("Usuário PPPoE não encontrado: " + pppoeUser.getUsername());
+            }
+        } catch (Exception e) {
+            handleException("Erro ao alterar dados do usuário PPPoE", e);
+        } finally {
+            closeConnection(connection);
+        }
     }
 
     public void changePppoeUserProfile(String host, Integer apiPort, String username, String password,
@@ -133,7 +175,7 @@ public class MikrotikApiService {
             log.info("Atualizando senha do usuário: {}", pppoeUsername);
             connection = connect(host, username, password);
 
-            String id = findIdByName(connection, "/ppp/secret/print", pppoeUsername);
+            String id = findIdByNameListAll(connection, "/ppp/secret/print", pppoeUsername);
 
             if (id != null) {
                 // CORREÇÃO: numbers ao invés de .id
@@ -153,7 +195,7 @@ public class MikrotikApiService {
         ApiConnection connection = null;
         try {
             connection = connect(host, username, password);
-            String id = findIdByName(connection, "/ppp/active/print", pppoeUsername);
+            String id = findIdByNameListAll(connection, "/ppp/active/print", pppoeUsername);
 
             if (id != null) {
                 // CORREÇÃO: numbers ao invés de .id
@@ -212,7 +254,7 @@ public class MikrotikApiService {
             log.info("Atualizando Profile: {}", oldProfileName);
             connection = connect(host, username, password);
 
-            String id = findIdByName(connection, "/ppp/profile/print", oldProfileName);
+            String id = findIdByNameListAll(connection, "/ppp/profile/print", oldProfileName);
 
             if (id != null) {
                 // CORREÇÃO: numbers ao invés de .id
@@ -248,7 +290,7 @@ public class MikrotikApiService {
         ApiConnection connection = null;
         try {
             connection = connect(host, username, password);
-            String id = findIdByName(connection, "/ppp/profile/print", profileName);
+            String id = findIdByNameListAll(connection, "/ppp/profile/print", profileName);
 
             if (id != null) {
                 // CORREÇÃO: numbers ao invés de .id
@@ -393,7 +435,7 @@ public class MikrotikApiService {
         ApiConnection connection = null;
         try {
             connection = connect(host, username, password);
-            String id = findIdByName(connection, basePath + "/print", pppoeUsername);
+            String id = findIdByNameListAll(connection, basePath + "/print", pppoeUsername);
 
             if (id != null) {
                 // CORREÇÃO: numbers ao invés de .id
