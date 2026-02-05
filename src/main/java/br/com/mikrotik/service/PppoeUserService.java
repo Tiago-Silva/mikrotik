@@ -160,39 +160,15 @@ public class PppoeUserService {
                 .orElseThrow(() -> new ResourceNotFoundException("Perfil PPPoE não encontrado"));
 
         MikrotikServer server = user.getMikrotikServer();
-        boolean profileChanged = !user.getProfile().getId().equals(newProfile.getId());
-        boolean passwordChanged = dto.getPassword() != null && !dto.getPassword().isEmpty();
 
-        // 1. ATUALIZAR NO MIKROTIK VIA API SE NECESSÁRIO
-        if (profileChanged) {
-            log.info("Alterando perfil do usuário {} no Mikrotik via API: {} -> {}",
-                    user.getUsername(), user.getProfile().getName(), newProfile.getName());
-
-            apiService.changePppoeUserProfile(
-                    server.getIpAddress(),
-                    server.getApiPort(),
-                    server.getUsername(),
-                    server.getPassword(),
-                    user.getUsername(),
-                    newProfile.getName()
-            );
-        }
-
-        if (passwordChanged) {
-            log.info("Atualizando senha do usuário {} no Mikrotik via API", user.getUsername());
-
-            apiService.updatePppoeUserPassword(
-                    server.getIpAddress(),
-                    server.getApiPort(),
-                    server.getUsername(),
-                    server.getPassword(),
-                    user.getUsername(),
-                    dto.getPassword()
-            );
-
-            // Atualizar senha no banco (texto plano - técnicos precisam visualizar)
-            user.setPassword(dto.getPassword());
-        }
+        apiService.changePppoeUserAll(
+                server.getIpAddress(),
+                server.getApiPort(),
+                server.getUsername(),
+                server.getPassword(),
+                user,
+                newProfile
+        );
 
         // 2. ATUALIZAR NO BANCO
         user.setEmail(dto.getEmail());
@@ -201,6 +177,7 @@ public class PppoeUserService {
         user.setStaticIp(dto.getStaticIp());
         user.setActive(dto.getActive());
         user.setProfile(newProfile);
+        user.setPassword(dto.getPassword());
         user.setUpdatedAt(LocalDateTime.now());
 
         PppoeUser updated = repository.save(user);
