@@ -1,6 +1,7 @@
 package br.com.mikrotik.service;
 
 import br.com.mikrotik.dto.TransactionDTO;
+import br.com.mikrotik.event.InvoicePaidEvent;
 import br.com.mikrotik.exception.ResourceNotFoundException;
 import br.com.mikrotik.exception.ValidationException;
 import br.com.mikrotik.model.Contract;
@@ -12,6 +13,7 @@ import br.com.mikrotik.repository.TransactionRepository;
 import br.com.mikrotik.util.CompanyContextHolder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -29,6 +31,7 @@ public class TransactionService {
     private final InvoiceRepository invoiceRepository;
     private final ContractRepository contractRepository;
     private final ContractService contractService;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * Criar nova transação (registrar pagamento)
@@ -65,6 +68,21 @@ public class TransactionService {
 
         // Verificar se deve reativar o contrato
         reactivateContractIfApplicable(invoice);
+
+        // Publicar evento para criar lançamento no fluxo de caixa (ASSÍNCRONO)
+        log.info(">>> PUBLICANDO EVENTO: InvoicePaidEvent <<<");
+        InvoicePaidEvent event = new InvoicePaidEvent(
+                invoice.getId(),
+                invoice.getContractId(),
+                invoice.getCustomerId(),
+                companyId,
+                transaction.getAmountPaid(),
+                transaction.getPaidAt(),
+                transaction.getMethod().toString(),
+                transaction.getTransactionCode()
+        );
+        eventPublisher.publishEvent(event);
+        log.info("✅ Evento publicado para processamento assíncrono no fluxo de caixa");
 
         log.info("==========================================================");
         log.info("✅ PAGAMENTO REGISTRADO COM SUCESSO - Transação ID: {}", transaction.getId());
