@@ -33,7 +33,7 @@ public class BankAccountDTO {
 
     @NotNull(message = "Tipo de conta é obrigatório")
     @Schema(description = "Tipo de conta", example = "CHECKING",
-            allowableValues = {"CHECKING", "SAVINGS", "CASH", "DIGITAL_WALLET", "CREDIT_CARD"},
+            allowableValues = {"CHECKING", "SAVINGS", "CASH", "CASH_INTERNAL", "DIGITAL_WALLET", "CREDIT_CARD"},
             requiredMode = Schema.RequiredMode.REQUIRED)
     private BankAccount.AccountType accountType;
 
@@ -46,7 +46,7 @@ public class BankAccountDTO {
     @Schema(description = "Número da conta", example = "12345-6")
     private String accountNumber;
 
-    @DecimalMin(value = "0.0", inclusive = true, message = "Saldo inicial não pode ser negativo")
+    @DecimalMin(value = "0.0", message = "Saldo inicial não pode ser negativo")
     @Digits(integer = 17, fraction = 2)
     @Schema(description = "Saldo inicial", example = "1000.00")
     private BigDecimal initialBalance;
@@ -97,9 +97,10 @@ public class BankAccountDTO {
                 .bankCode(this.bankCode)
                 .agency(this.agency)
                 .accountNumber(this.accountNumber)
-                .initialBalance(this.initialBalance)
-                .currentBalance(this.currentBalance)
-                .active(this.active)
+                .initialBalance(this.initialBalance != null ? this.initialBalance : BigDecimal.ZERO)
+                .currentBalance(this.currentBalance != null ? this.currentBalance :
+                               (this.initialBalance != null ? this.initialBalance : BigDecimal.ZERO))
+                .active(this.active != null ? this.active : true)
                 .notes(this.notes)
                 .createdAt(this.createdAt)
                 .updatedAt(this.updatedAt)
