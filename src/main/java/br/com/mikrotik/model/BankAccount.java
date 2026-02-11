@@ -38,12 +38,15 @@ public class BankAccount {
     @Column(name = "account_number", length = 30)
     private String accountNumber;
 
-    @Column(name = "initial_balance", precision = 19, scale = 2)
+    @Builder.Default
+    @Column(name = "initial_balance", nullable = false, precision = 19, scale = 2)
     private BigDecimal initialBalance = BigDecimal.ZERO;
 
-    @Column(name = "current_balance", precision = 19, scale = 2)
+    @Builder.Default
+    @Column(name = "current_balance", nullable = false, precision = 19, scale = 2)
     private BigDecimal currentBalance = BigDecimal.ZERO;
 
+    @Builder.Default
     @Column(nullable = false)
     private Boolean active = true;
 
@@ -53,7 +56,7 @@ public class BankAccount {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at")
+    @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
     @PrePersist
@@ -65,6 +68,9 @@ public class BankAccount {
         }
         if (currentBalance == null) {
             currentBalance = initialBalance;
+        }
+        if (active == null) {
+            active = true;
         }
     }
 
@@ -86,11 +92,11 @@ public class BankAccount {
     }
 
     public enum AccountType {
-        CHECKING,      // Conta Corrente
-        SAVINGS,       // Poupança
-        CASH,          // Caixa
-        DIGITAL_WALLET,// Carteira Digital (PicPay, Mercado Pago, etc)
-        CREDIT_CARD    // Cartão de Crédito
+        CHECKING,       // Conta Corrente
+        SAVINGS,        // Poupança
+        CASH,           // Caixa Geral
+        CASH_INTERNAL,  // Caixa Interno (uso da empresa)
+        DIGITAL_WALLET, // Carteira Digital (PicPay, Mercado Pago, etc)
+        CREDIT_CARD     // Cartão de Crédito
     }
 }
-
