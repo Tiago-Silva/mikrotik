@@ -2,7 +2,6 @@ package br.com.mikrotik.service;
 
 import br.com.mikrotik.dto.BankAccountDTO;
 import br.com.mikrotik.exception.ResourceNotFoundException;
-import br.com.mikrotik.exception.ValidationException;
 import br.com.mikrotik.model.BankAccount;
 import br.com.mikrotik.repository.BankAccountRepository;
 import br.com.mikrotik.util.CompanyContextHolder;
@@ -33,20 +32,23 @@ public class BankAccountService {
         Long companyId = CompanyContextHolder.getCompanyId();
         dto.setCompanyId(companyId);
 
-        // Validar se já existe conta com mesmo número
-        if (dto.getAccountNumber() != null && dto.getBankCode() != null) {
-            // A constraint UNIQUE no banco já impede duplicação
+        // Garantir valores padrão
+        if (dto.getInitialBalance() == null) {
+            dto.setInitialBalance(java.math.BigDecimal.ZERO);
         }
-
-        // Definir saldo atual igual ao inicial
-        if (dto.getCurrentBalance() == null && dto.getInitialBalance() != null) {
+        if (dto.getCurrentBalance() == null) {
             dto.setCurrentBalance(dto.getInitialBalance());
         }
+        if (dto.getActive() == null) {
+            dto.setActive(true);
+        }
+
 
         BankAccount account = dto.toEntity();
         account = bankAccountRepository.save(account);
 
-        log.info("Conta bancária criada: ID={}, Nome={}", account.getId(), account.getName());
+        log.info("✅ Conta bancária criada: ID={}, Nome={}, Tipo={}",
+                 account.getId(), account.getName(), account.getAccountType());
         return BankAccountDTO.fromEntity(account);
     }
 
