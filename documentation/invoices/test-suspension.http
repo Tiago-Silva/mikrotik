@@ -1,0 +1,19 @@
+### ============================================
+### 🧪 TESTE MANUAL: Suspensão Automática
+### ============================================
+
+### 1. Executar Suspensão Manual (SEM autenticação necessária)
+POST http://localhost:8080/api/test/trigger-suspension
+Content-Type: application/json
+x-company-id: 1
+
+### Resposta esperada:
+### ✅ Suspensão executada! Verifique os logs para detalhes.
+
+### 2. (Opcional) Com Token - se quiser testar com autenticação
+# POST http://localhost:8080/api/test/trigger-suspension
+# Content-Type: application/json
+# x-company-id: 1
+# Authorization: Bearer {{token}}
+
+###

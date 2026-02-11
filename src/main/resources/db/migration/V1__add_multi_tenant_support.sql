@@ -264,6 +264,109 @@ CREATE TABLE transactions (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ==========================================
+-- 5.1 FLUXO DE CAIXA AVANÇADO
+-- ==========================================
+
+-- Contas Bancárias / Carteiras
+CREATE TABLE bank_accounts (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    company_id BIGINT NOT NULL,
+    name VARCHAR(255) NOT NULL COMMENT 'Ex: Banco do Brasil - CC 12345-6',
+    account_type ENUM('CHECKING', 'SAVINGS', 'CASH', 'CASH_INTERNAL', 'DIGITAL_WALLET', 'CREDIT_CARD') NOT NULL,
+    bank_code VARCHAR(10) COMMENT 'Código do banco (ex: 001 para Banco do Brasil)',
+    agency VARCHAR(20),
+    account_number VARCHAR(30),
+    initial_balance DECIMAL(19, 2) NOT NULL DEFAULT 0.00,
+    current_balance DECIMAL(19, 2) NOT NULL DEFAULT 0.00 COMMENT 'Atualizado via lock pessimista',
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    notes TEXT,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE RESTRICT,
+    UNIQUE KEY uk_account_company (company_id, account_number, bank_code),
+    INDEX idx_company_id (company_id),
+    INDEX idx_active (active)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Plano de Contas (DRE - Demonstrativo de Resultados do Exercício)
+CREATE TABLE chart_of_accounts (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    company_id BIGINT NOT NULL,
+    code VARCHAR(20) NOT NULL COMMENT 'Ex: 1.1.01 (Ativo Circulante - Caixa)',
+    name VARCHAR(255) NOT NULL COMMENT 'Ex: Receita de Serviços - Internet',
+    account_type ENUM('REVENUE', 'EXPENSE', 'ASSET', 'LIABILITY', 'EQUITY') NOT NULL,
+    category ENUM(
+        'SUBSCRIPTION_REVENUE', 'INSTALLATION_FEE', 'LATE_FEE', 'OTHER_REVENUE',
+        'LINK_COST', 'SALARY', 'RENT', 'MARKETING', 'MAINTENANCE', 'TAX', 'OTHER_EXPENSE',
+        'CASH', 'BANK', 'ACCOUNTS_RECEIVABLE', 'ACCOUNTS_PAYABLE', 'LOAN', 'CAPITAL'
+    ) NOT NULL,
+    parent_id BIGINT COMMENT 'Hierarquia de contas (ex: 1.1 -> 1.1.01)',
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE RESTRICT,
+    FOREIGN KEY (parent_id) REFERENCES chart_of_accounts(id) ON DELETE SET NULL,
+    UNIQUE KEY uk_code_company (code, company_id),
+    INDEX idx_company_id (company_id),
+    INDEX idx_account_type (account_type),
+    INDEX idx_category (category)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Lançamentos Financeiros (Double-Entry Bookkeeping)
+CREATE TABLE financial_entries (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    company_id BIGINT NOT NULL,
+    bank_account_id BIGINT NOT NULL,
+    chart_of_account_id BIGINT NOT NULL COMMENT 'Categoria DRE deste lançamento',
+    entry_type ENUM('CREDIT', 'DEBIT', 'REVERSAL') NOT NULL,
+    transaction_type ENUM(
+        'INVOICE_PAYMENT', 'MANUAL_ENTRY', 'TRANSFER', 'ADJUSTMENT', 'REFUND'
+    ) NOT NULL,
+    amount DECIMAL(19, 2) NOT NULL,
+    description VARCHAR(500) NOT NULL,
+    reference_date DATE NOT NULL COMMENT 'Data de competência',
+    effective_date DATETIME NOT NULL COMMENT 'Data de efetivação no banco',
+    invoice_id BIGINT COMMENT 'Vínculo com fatura (se aplicável)',
+    reversed_from_id BIGINT COMMENT 'ID do lançamento original que está sendo estornado',
+    status ENUM('ACTIVE', 'REVERSED', 'CANCELLED') NOT NULL DEFAULT 'ACTIVE',
+    notes TEXT,
+    created_by BIGINT COMMENT 'Usuário que criou o lançamento',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE RESTRICT,
+    FOREIGN KEY (bank_account_id) REFERENCES bank_accounts(id) ON DELETE RESTRICT,
+    FOREIGN KEY (chart_of_account_id) REFERENCES chart_of_accounts(id) ON DELETE RESTRICT,
+    FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE SET NULL,
+    FOREIGN KEY (reversed_from_id) REFERENCES financial_entries(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES api_users(id) ON DELETE SET NULL,
+    INDEX idx_company_id (company_id),
+    INDEX idx_bank_account_id (bank_account_id),
+    INDEX idx_chart_of_account_id (chart_of_account_id),
+    INDEX idx_reference_date (reference_date),
+    INDEX idx_effective_date (effective_date),
+    INDEX idx_status (status),
+    INDEX idx_entry_type (entry_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Saldos Diários Consolidados (Performance)
+CREATE TABLE daily_balances (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    company_id BIGINT NOT NULL,
+    bank_account_id BIGINT NOT NULL,
+    balance_date DATE NOT NULL COMMENT 'Data do fechamento',
+    opening_balance DECIMAL(19, 2) NOT NULL COMMENT 'Saldo de abertura',
+    total_credits DECIMAL(19, 2) DEFAULT 0.00 COMMENT 'Total de entradas do dia',
+    total_debits DECIMAL(19, 2) DEFAULT 0.00 COMMENT 'Total de saídas do dia',
+    closing_balance DECIMAL(19, 2) NOT NULL COMMENT 'Saldo de fechamento',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE RESTRICT,
+    FOREIGN KEY (bank_account_id) REFERENCES bank_accounts(id) ON DELETE RESTRICT,
+    UNIQUE KEY uk_balance_date (company_id, bank_account_id, balance_date),
+    INDEX idx_balance_date (balance_date),
+    INDEX idx_company_id (company_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==========================================
 -- 6. AUTOMAÇÃO E AUDITORIA
 -- ==========================================
 
@@ -344,5 +447,6 @@ SET FOREIGN_KEY_CHECKS = 1;
 -- 2. Os usuários são corretamente vinculados à empresa
 -- 3. As senhas são criptografadas com BCrypt
 --
--- Migration V1 - Schema com 18 tabelas criado com sucesso!
+-- Migration V1 - Schema com 23 tabelas criado com sucesso!
+-- Inclui: Multi-tenant, CRM, Mikrotik, Contratos, Financeiro e Fluxo de Caixa
 -- ==========================================
