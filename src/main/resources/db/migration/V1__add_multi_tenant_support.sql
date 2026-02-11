@@ -272,16 +272,16 @@ CREATE TABLE bank_accounts (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     company_id BIGINT NOT NULL,
     name VARCHAR(255) NOT NULL COMMENT 'Ex: Banco do Brasil - CC 12345-6',
-    account_type ENUM('CHECKING', 'SAVINGS', 'CASH', 'DIGITAL_WALLET', 'CREDIT_CARD') NOT NULL,
+    account_type ENUM('CHECKING', 'SAVINGS', 'CASH', 'CASH_INTERNAL', 'DIGITAL_WALLET', 'CREDIT_CARD') NOT NULL,
     bank_code VARCHAR(10) COMMENT 'Código do banco (ex: 001 para Banco do Brasil)',
     agency VARCHAR(20),
     account_number VARCHAR(30),
-    initial_balance DECIMAL(19, 2) DEFAULT 0.00,
-    current_balance DECIMAL(19, 2) DEFAULT 0.00 COMMENT 'Atualizado via lock pessimista',
-    active BOOLEAN DEFAULT TRUE,
+    initial_balance DECIMAL(19, 2) NOT NULL DEFAULT 0.00,
+    current_balance DECIMAL(19, 2) NOT NULL DEFAULT 0.00 COMMENT 'Atualizado via lock pessimista',
+    active BOOLEAN NOT NULL DEFAULT TRUE,
     notes TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE RESTRICT,
     UNIQUE KEY uk_account_company (company_id, account_number, bank_code),
     INDEX idx_company_id (company_id),
@@ -301,9 +301,9 @@ CREATE TABLE chart_of_accounts (
         'CASH', 'BANK', 'ACCOUNTS_RECEIVABLE', 'ACCOUNTS_PAYABLE', 'LOAN', 'CAPITAL'
     ) NOT NULL,
     parent_id BIGINT COMMENT 'Hierarquia de contas (ex: 1.1 -> 1.1.01)',
-    active BOOLEAN DEFAULT TRUE,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE RESTRICT,
     FOREIGN KEY (parent_id) REFERENCES chart_of_accounts(id) ON DELETE SET NULL,
     UNIQUE KEY uk_code_company (code, company_id),
@@ -328,11 +328,11 @@ CREATE TABLE financial_entries (
     effective_date DATETIME NOT NULL COMMENT 'Data de efetivação no banco',
     invoice_id BIGINT COMMENT 'Vínculo com fatura (se aplicável)',
     reversed_from_id BIGINT COMMENT 'ID do lançamento original que está sendo estornado',
-    status ENUM('ACTIVE', 'REVERSED', 'CANCELLED') DEFAULT 'ACTIVE',
+    status ENUM('ACTIVE', 'REVERSED', 'CANCELLED') NOT NULL DEFAULT 'ACTIVE',
     notes TEXT,
     created_by BIGINT COMMENT 'Usuário que criou o lançamento',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE RESTRICT,
     FOREIGN KEY (bank_account_id) REFERENCES bank_accounts(id) ON DELETE RESTRICT,
     FOREIGN KEY (chart_of_account_id) REFERENCES chart_of_accounts(id) ON DELETE RESTRICT,
@@ -364,22 +364,6 @@ CREATE TABLE daily_balances (
     UNIQUE KEY uk_balance_date (company_id, bank_account_id, balance_date),
     INDEX idx_balance_date (balance_date),
     INDEX idx_company_id (company_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Categorias de Fluxo de Caixa (Simplificado para Relatórios)
-CREATE TABLE cash_flow_categories (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    company_id BIGINT NOT NULL,
-    name VARCHAR(255) NOT NULL COMMENT 'Ex: Links de Internet, Salários, Marketing',
-    category_type ENUM('REVENUE', 'EXPENSE') NOT NULL,
-    color VARCHAR(7) COMMENT 'Código hexadecimal para UI (ex: #FF5733)',
-    icon VARCHAR(50) COMMENT 'Nome do ícone para UI',
-    active BOOLEAN DEFAULT TRUE,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE RESTRICT,
-    INDEX idx_company_id (company_id),
-    INDEX idx_category_type (category_type)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ==========================================
