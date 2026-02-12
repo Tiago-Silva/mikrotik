@@ -32,6 +32,15 @@ public class PppoeUserService {
     private final PppoeProfileRepository profileRepository;
     private final MikrotikApiService apiService; // API service for better performance
 
+    /**
+     * Buscar todos os usuários PPPoE da empresa
+     */
+    @Transactional(readOnly = true)
+    public List<PppoeUser> findAll() {
+        Long companyId = CompanyContextHolder.getCompanyId();
+        return repository.findByCompanyId(companyId);
+    }
+
     @Transactional
     public PppoeUserDTO create(PppoeUserDTO dto) {
         MikrotikServer server = serverRepository.findById(dto.getMikrotikServerId())
