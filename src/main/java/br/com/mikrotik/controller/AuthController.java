@@ -4,7 +4,9 @@ import br.com.mikrotik.dto.LoginDTO;
 import br.com.mikrotik.dto.LoginResponseDTO;
 import br.com.mikrotik.dto.UserInfoDTO;
 import br.com.mikrotik.model.ApiUser;
+import br.com.mikrotik.model.Company;
 import br.com.mikrotik.repository.ApiUserRepository;
+import br.com.mikrotik.repository.CompanyRepository;
 import br.com.mikrotik.security.JwtTokenProvider;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -13,7 +15,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
@@ -28,26 +29,35 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider tokenProvider;
     private final ApiUserRepository apiUserRepository;
+    private final CompanyRepository companyRepository;
 
     @PostMapping("/login")
     @Operation(summary = "Realizar login", description = "Autenticar usuário e obter JWT token")
     public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginDTO loginDTO) {
-        Authentication authentication = authenticationManager.authenticate(
+        authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         loginDTO.getUsername(),
                         loginDTO.getPassword()
                 )
         );
 
-        // Buscar usuário com company (eager loading) para evitar LazyInitializationException
-        ApiUser user = apiUserRepository.findWithCompanyByUsername(loginDTO.getUsername())
+        // Buscar usuário pelo username (não usa mais eager loading de company)
+        ApiUser user = apiUserRepository.findByUsername(loginDTO.getUsername())
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
 
-        // Gerar token com companyId (multi-tenant)
-        Long companyId = user.getCompany() != null ? user.getCompany().getId() : null;
+        // Obter companyId e buscar company separadamente se necessário
+        Long companyId = user.getCompanyId();
+        String companyName = null;
+        if (companyId != null) {
+            companyName = companyRepository.findById(companyId)
+                    .map(Company::getName)
+                    .orElse(null);
+        }
+
+        // Gerar token com companyId (multi-tenant) - role como String
         String token = tokenProvider.generateTokenWithCompany(
                 user.getUsername(),
-                user.getRole(),
+                user.getRole().name(), // Converte enum para String
                 companyId
         );
 
@@ -56,9 +66,9 @@ public class AuthController {
                 .id(user.getId())
                 .username(user.getUsername())
                 .email(user.getEmail())
-                .role(user.getRole())
+                .role(user.getRole().name()) // Converte enum para String
                 .companyId(companyId)
-                .companyName(user.getCompany() != null ? user.getCompany().getName() : null)
+                .companyName(companyName)
                 .active(user.getActive())
                 .build();
 
@@ -83,19 +93,26 @@ public class AuthController {
         String token = authHeader.replace("Bearer ", "");
         String username = tokenProvider.getUsernameFromToken(token);
 
-        // Buscar usuário com company (eager loading) para evitar LazyInitializationException
-        ApiUser user = apiUserRepository.findWithCompanyByUsername(username)
+        // Buscar usuário pelo username
+        ApiUser user = apiUserRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
 
-        Long companyId = user.getCompany() != null ? user.getCompany().getId() : null;
+        // Obter companyId e buscar company separadamente
+        Long companyId = user.getCompanyId();
+        String companyName = null;
+        if (companyId != null) {
+            companyName = companyRepository.findById(companyId)
+                    .map(Company::getName)
+                    .orElse(null);
+        }
 
         UserInfoDTO userInfo = UserInfoDTO.builder()
                 .id(user.getId())
                 .username(user.getUsername())
                 .email(user.getEmail())
-                .role(user.getRole())
+                .role(user.getRole().name()) // Converte enum para String
                 .companyId(companyId)
-                .companyName(user.getCompany() != null ? user.getCompany().getName() : null)
+                .companyName(companyName)
                 .active(user.getActive())
                 .build();
 
