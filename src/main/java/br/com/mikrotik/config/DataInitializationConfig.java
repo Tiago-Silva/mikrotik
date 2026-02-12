@@ -2,6 +2,7 @@ package br.com.mikrotik.config;
 
 import br.com.mikrotik.model.ApiUser;
 import br.com.mikrotik.model.Company;
+import br.com.mikrotik.model.UserRole;
 import br.com.mikrotik.repository.ApiUserRepository;
 import br.com.mikrotik.repository.CompanyRepository;
 import lombok.RequiredArgsConstructor;
@@ -41,7 +42,7 @@ public class DataInitializationConfig {
                 log.info("✅ Empresa padrão criada com sucesso! ID: {}", defaultCompany.getId());
             } else {
                 defaultCompany = companyRepository.findById(1L)
-                        .orElseGet(() -> companyRepository.findAll().get(0));
+                        .orElseGet(() -> companyRepository.findAll().getFirst());
                 log.info("✅ Empresa padrão já existe! ID: {}", defaultCompany.getId());
             }
 
@@ -50,13 +51,13 @@ public class DataInitializationConfig {
             // ==========================================
 
             // Criar usuário ADMIN
-            if (apiUserRepository.findByUsername("admin").isEmpty()) {
+            if (apiUserRepository.findByUsernameAndCompanyId("admin", defaultCompany.getId()).isEmpty()) {
                 ApiUser admin = new ApiUser();
-                admin.setCompany(defaultCompany);  // ← VINCULA À EMPRESA
+                admin.setCompanyId(defaultCompany.getId());  // ← VINCULA À EMPRESA
                 admin.setUsername("admin");
                 admin.setPassword(passwordEncoder.encode("admin"));  // senha: admin
                 admin.setEmail("admin@example.com");
-                admin.setRole("ADMIN");
+                admin.setRole(UserRole.ADMIN);
                 admin.setActive(true);
 
                 apiUserRepository.save(admin);
@@ -66,13 +67,13 @@ public class DataInitializationConfig {
             }
 
             // Criar usuário OPERATOR
-            if (apiUserRepository.findByUsername("operator").isEmpty()) {
+            if (apiUserRepository.findByUsernameAndCompanyId("operator", defaultCompany.getId()).isEmpty()) {
                 ApiUser operator = new ApiUser();
-                operator.setCompany(defaultCompany);  // ← VINCULA À EMPRESA
+                operator.setCompanyId(defaultCompany.getId());  // ← VINCULA À EMPRESA
                 operator.setUsername("operator");
                 operator.setPassword(passwordEncoder.encode("operator"));  // senha: operator
                 operator.setEmail("operator@example.com");
-                operator.setRole("OPERATOR");
+                operator.setRole(UserRole.OPERATOR);
                 operator.setActive(true);
 
                 apiUserRepository.save(operator);
@@ -82,13 +83,13 @@ public class DataInitializationConfig {
             }
 
             // Criar usuário VIEWER
-            if (apiUserRepository.findByUsername("viewer").isEmpty()) {
+            if (apiUserRepository.findByUsernameAndCompanyId("viewer", defaultCompany.getId()).isEmpty()) {
                 ApiUser viewer = new ApiUser();
-                viewer.setCompany(defaultCompany);  // ← VINCULA À EMPRESA
+                viewer.setCompanyId(defaultCompany.getId());  // ← VINCULA À EMPRESA
                 viewer.setUsername("viewer");
                 viewer.setPassword(passwordEncoder.encode("viewer"));  // senha: viewer
                 viewer.setEmail("viewer@example.com");
-                viewer.setRole("VIEWER");
+                viewer.setRole(UserRole.VIEWER);
                 viewer.setActive(true);
 
                 apiUserRepository.save(viewer);
