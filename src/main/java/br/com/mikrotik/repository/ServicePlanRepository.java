@@ -38,6 +38,9 @@ public interface ServicePlanRepository extends JpaRepository<ServicePlan, Long> 
     // Buscar planos que usam um perfil PPPoE específico
     List<ServicePlan> findByPppoeProfileId(Long pppoeProfileId);
 
+    // Buscar plano por perfil PPPoE e empresa
+    Optional<ServicePlan> findByPppoeProfileIdAndCompanyId(Long pppoeProfileId, Long companyId);
+
     // Contar planos por empresa
     long countByCompanyId(Long companyId);
 
