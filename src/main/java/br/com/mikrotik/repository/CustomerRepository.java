@@ -23,6 +23,9 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
     // Buscar por empresa e nome (like)
     Page<Customer> findByCompanyIdAndNameContainingIgnoreCase(Long companyId, String name, Pageable pageable);
 
+    // Buscar por nome exato e empresa
+    Optional<Customer> findByNameAndCompanyId(String name, Long companyId);
+
     // Buscar por documento e empresa
     Optional<Customer> findByDocumentAndCompanyId(String document, Long companyId);
 
