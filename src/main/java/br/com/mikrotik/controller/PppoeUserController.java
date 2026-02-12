@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/api/users")
+@RequestMapping("/api/pppoe-users")
 @RequiredArgsConstructor
 @Slf4j
 @SecurityRequirement(name = "Bearer Token")
