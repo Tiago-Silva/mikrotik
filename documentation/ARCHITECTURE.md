@@ -68,14 +68,36 @@
          │
          └─────────► Persistence
 
-         ┌────────────────────┐
-         │  SSH Integration   │
-         │  (JSch Library)    │
-         │         │          │
-         │         ▼          │
-         │  Mikrotik Router   │
-         │  (PPPoE Server)    │
-         └────────────────────┘
+## arquitetura de Integrações Assíncronas (Event-Driven)
+
+```
+                                      ┌──────────────────────┐
+                                      │   DATABASE TRANSACTION    │
+                                      │                          │
+POST /suspend  ────────────────────►  │ 1. Update Contract Status │
+(HTTP Request)                        │ 2. Publish Domain Event   │
+                                      │    (ContractStatusChanged)│
+                                      └─────────────┬────────────┘
+         ┌──────────────────────────────────────────┘
+         │ (Transaction Commits)
+         ▼
+┌──────────────────┐               ┌──────────────────────────────┐
+│ HTTP RESPONSE 200│               │   ASYNC EVENT LISTENER       │
+│  (Immediate)     │               │  (NetworkIntegrationService) │
+└──────────────────┘               │                              │
+                                   │ 1. Receive Event (@Async)    │
+                                   │ 2. Thread Pool Execution     │
+                                   │ 3. Retry Logic (Spring Retry)│
+                                   └─────────────┬────────────────┘
+                                                 │
+                                                 ▼
+                                   ┌──────────────────────────────┐
+                                   │      MIKROTIK INTEGRATION    │
+                                   │                              │
+                                   │  • SSH / API Command         │
+                                   │  • Block/Unblock User        │
+                                   │  • Disconnect Session        │
+                                   └──────────────────────────────┘
 ```
 
 ## Fluxo de Requisição

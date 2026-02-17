@@ -27,6 +27,18 @@ curl -X POST http://localhost:8080/api/auth/login \
 ✅ Usuário padrão já criado  
 ✅ Receba JWT token  
 
+### 4️⃣ Testar Integrações Assíncronas (Novo)
+O sistema agora processa suspensões e ativações em background. Valide o funcionamento:
+
+```bash
+chmod +x ./test-async-integration.sh
+./test-async-integration.sh
+```
+✅ Cria contrato de teste  
+✅ Verifica se API retorna rápido (<1s)  
+✅ Confirma se status mudou no banco  
+✅ Verifica logs de thread assíncrona  
+
 ---
 
 ## 👥 Usuários Padrão
@@ -250,4 +262,3 @@ Você agora tem uma **API REST profissional** para gerenciar Mikrotik com PPPoE.
 **Versão:** 1.0.0  
 **Status:** ✅ Pronto para Usar  
 **Data:** Janeiro 2026  
-

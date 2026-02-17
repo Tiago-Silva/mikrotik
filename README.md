@@ -1,17 +1,20 @@
 # 🚀✨ API REST Completa para Gerenciamento de Provedores de Internet (ISP) ✨
 
-> ## 🏗️ **NOVA ARQUITETURA MODULAR MONOLITH + HEXAGONAL**
+> ## 🏗️ **ARQUITETURA ATUAL: MODULAR MONOLITH + ASYNC EVENTS**
 > 
-> **Status:** ✅ Estrutura criada | ⏳ Migração de arquivos em andamento
+> **Status:** ✅ Em Operação | 🚀 Integrações Assíncronas Implementadas
 > 
-> Este projeto está sendo refatorado para **Modular Monolith com Bounded Contexts (DDD) + Hexagonal Architecture**.
+> Este projeto utiliza uma arquitetura **Modular Monolith organizada por Features**, com proteção transacional via **Eventos e Processamento Assíncrono**.
 > 
-> 📘 **Guias de Migração:**
-> - [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md) - Sumário da implementação
-> - [MIGRATION_MANUAL.md](MIGRATION_MANUAL.md) - Passo a passo no IntelliJ IDEA
-> - [documentation/REFACTORING_GUIDE.md](documentation/REFACTORING_GUIDE.md) - Guia técnico completo
+> 📘 **Documentação Arquitetural:**
+> - [ARCHITECTURE_ACTUAL.md](documentation/ARCHITECTURE_ACTUAL.md) - Arquitetura real e decisões (ADRs)
+> - [ASYNC_INTEGRATION_GUIDE.md](documentation/ASYNC_INTEGRATION_GUIDE.md) - Guia de integrações assíncronas
+> - [documentation/REFACTORING_GUIDE.md](documentation/REFACTORING_GUIDE.md) - Histórico de refatoração
 >
-> 🎯 **Benefícios:** +80% Legibilidade | +70% Manutenibilidade | +90% Escalabilidade
+> 🎯 **Benefícios Chave:**
+> - **API Rápida (<500ms):** Operações pesadas (Mikrotik) rodam em background
+> - **Resiliência:** Retry automático (3x) em falhas de rede
+> - **Organização:** Código separado por domínios (features)
 
 ## 🌐 Sobre o Projeto
 
@@ -27,6 +30,14 @@ Esta API REST robusta permite que provedores de internet (ISPs) automatizem comp
 - 💼 **Camada Comercial**: Planos comerciais, contratos e lifecycle management
 - 💰 **Camada Financeira**: Faturas automáticas, pagamentos e integração com gateways
 - 🤖 **Automação**: Régua de cobrança, bloqueios automáticos e notificações
+
+### ⚡ Integrações Assíncronas (Novo)
+
+O sistema agora utiliza processamento em background para comunicação com hardware Mikrotik:
+
+*   **O que mudou?** Suspensão e ativação retornam instantaneamente; processamento ocorre em thread separada.
+*   **Como monitorar?** Acompanhe logs com tag `[network-integration-1]`.
+*   **Guia Completo**: [documentation/ASYNC_INTEGRATION_GUIDE.md](documentation/ASYNC_INTEGRATION_GUIDE.md)
 
 ### 📊 Status do Projeto
 
@@ -465,4 +476,3 @@ Encontrou um bug? Tem uma sugestão? Abra uma [issue](https://github.com/seu-usu
 ---
 
 **Feito com ❤️, Java e muito Spring Boot!** ☕🚀
-
