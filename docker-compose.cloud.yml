@@ -1,18 +1,15 @@
-version: '3.8'
-
 services:
   # Database Service: MySQL 8.0
   mysql:
     image: mysql:8.0
     container_name: mikrotik-mysql
     restart: unless-stopped
-    env_file: .env.cloud # Centraliza a configuração
+    env_file: .env.cloud
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
     volumes:
       - mysql_data:/var/lib/mysql
-      # Removido o schema.sql para que o Flyway assuma o controle total
     networks:
       - mikrotik-network
     healthcheck:
@@ -23,37 +20,39 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1G # MySQL em produção com folga de memória
+          memory: 1G
 
   # Backend Service: Spring Boot (Java 21)
   api:
     build:
-      context: ./mikrotik # Nome da pasta do backend no seu servidor
+      context: ./mikrotik
       dockerfile: Dockerfile
     container_name: mikrotik-app
     restart: unless-stopped
     env_file: .env.cloud
     depends_on:
       mysql:
-        condition: service_healthy # Só inicia após o MySQL estar pronto
+        condition: service_healthy
     ports:
-      - "8080:8080" # Necessário para o frontend acessar a API via IP Público
+      - "8080:8080"
     environment:
+      # Conexão direta usando as variáveis do .env
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: ${MYSQL_USER}
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
-      # O Flyway usará automaticamente estas credenciais para rodar as migrations
+      # Correção do erro: Passando o Driver explicitamente para o container
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME}
     networks:
       - mikrotik-network
     deploy:
       resources:
         limits:
-          memory: 2G # Aproveitando os 12GB da Oracle
+          memory: 2G
 
   # Frontend Service: React + Vite (Nginx)
   frontend:
     build:
-      context: ./mikrotik-dash # Nome da pasta do frontend no seu servidor
+      context: ./mikrotik-dash
       dockerfile: Dockerfile
     container_name: mikrotik-frontend
     restart: unless-stopped
