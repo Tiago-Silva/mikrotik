@@ -8,6 +8,8 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     volumes:
       - mysql_data:/var/lib/mysql
     networks:
@@ -36,12 +38,18 @@ services:
     ports:
       - "8080:8080"
     environment:
-      # Conexão direta usando as variáveis do .env
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      # Sincronizado com o seu application.yml
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8
       SPRING_DATASOURCE_USERNAME: ${MYSQL_USER}
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
-      # Correção do erro: Passando o Driver explicitamente para o container
       SPRING_DATASOURCE_DRIVER_CLASS_NAME: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME}
+      SPRING_JPA_DATABASE_PLATFORM: ${SPRING_JPA_DATABASE_PLATFORM}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: ${SPRING_JPA_HIBERNATE_DDL_AUTO}
+      MIKROTIK_HOST: ${MIKROTIK_HOST}
+      MIKROTIK_PORT: ${MIKROTIK_PORT}
+      MIKROTIK_USERNAME: ${MIKROTIK_USERNAME}
+      MIKROTIK_PASSWORD: ${MIKROTIK_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
     networks:
       - mikrotik-network
     deploy:
