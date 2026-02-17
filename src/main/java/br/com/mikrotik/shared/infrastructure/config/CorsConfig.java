@@ -20,7 +20,9 @@ public class CorsConfig {
                 "https://*.lovable.app",
                 "https://*.lovable.dev",
                 "http://localhost:*",
-                "http://127.0.0.1:*"
+                "http://127.0.0.1:*",
+                "http://137.131.178.249",    // Seu IP da Oracle
+                "http://137.131.178.249:*"   // Permite qualquer porta do seu IP (útil para testes)
         ));
 
         // Métodos HTTP permitidos
