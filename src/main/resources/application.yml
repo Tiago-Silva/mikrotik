@@ -79,3 +79,14 @@ springdoc:
     path: ${SPRINGDOC_SWAGGER_UI_PATH:/swagger-ui.html}
     operationsSorter: method
     tagsSorter: alpha
+
+# ========== ACTUATOR (Health Check) ==========
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
