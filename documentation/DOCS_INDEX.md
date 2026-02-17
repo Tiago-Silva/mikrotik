@@ -30,6 +30,7 @@ documentation/
 │
 ├── 🏗️ ARQUITETURA & PLANEJAMENTO
 │   ├── ARCHITECTURE.md         🏛️ Arquitetura em camadas
+│   ├── REFACTORING_GUIDE.md    🔄 Guia de Refatoração Arquitetural (NOVO)
 │   ├── ROADMAP.md              🗺️ Roadmap (9 fases)
 │   ├── SUMMARY.md              📊 Sumário executivo
 │   └── MANIFEST.md             📋 Manifesto de arquivos

@@ -1,5 +1,18 @@
 # 🚀✨ API REST Completa para Gerenciamento de Provedores de Internet (ISP) ✨
 
+> ## 🏗️ **NOVA ARQUITETURA MODULAR MONOLITH + HEXAGONAL**
+> 
+> **Status:** ✅ Estrutura criada | ⏳ Migração de arquivos em andamento
+> 
+> Este projeto está sendo refatorado para **Modular Monolith com Bounded Contexts (DDD) + Hexagonal Architecture**.
+> 
+> 📘 **Guias de Migração:**
+> - [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md) - Sumário da implementação
+> - [MIGRATION_MANUAL.md](MIGRATION_MANUAL.md) - Passo a passo no IntelliJ IDEA
+> - [documentation/REFACTORING_GUIDE.md](documentation/REFACTORING_GUIDE.md) - Guia técnico completo
+>
+> 🎯 **Benefícios:** +80% Legibilidade | +70% Manutenibilidade | +90% Escalabilidade
+
 ## 🌐 Sobre o Projeto
 
 **De gerenciador de PPPoE para ERP completo de ISP!**

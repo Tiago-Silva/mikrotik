@@ -63,9 +63,13 @@ logging:
   level:
     root: ${LOGGING_LEVEL_ROOT:INFO}
     br.com.mikrotik: ${LOGGING_LEVEL_BR_COM_MIKROTIK:DEBUG}
+    br.com.mikrotik.features.network.service.NetworkIntegrationService: DEBUG
+    br.com.mikrotik.features.contracts.service.ContractService: DEBUG
     org.springframework.security: ${LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY:INFO}
+    org.springframework.scheduling: INFO
+    org.springframework.retry: DEBUG
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
 
 # ========== SWAGGER ==========
 springdoc:
