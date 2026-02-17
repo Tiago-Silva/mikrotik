@@ -1,0 +1,446 @@
+package br.com.mikrotik.features.network.server.adapter;
+
+import br.com.mikrotik.features.network.pppoe.dto.MikrotikPppoeProfileDTO;
+import br.com.mikrotik.features.network.pppoe.dto.MikrotikPppoeUserDTO;
+import br.com.mikrotik.shared.infrastructure.exception.MikrotikConnectionException;
+import com.jcraft.jsch.*;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+@Service
+@Slf4j
+public class MikrotikSshService {
+
+    public boolean testConnection(String host, Integer port, String username, String password) {
+        try {
+            JSch jsch = new JSch();
+            Session session = jsch.getSession(username, host, port);
+            session.setPassword(password);
+            session.setConfig("StrictHostKeyChecking", "no");
+            session.connect(5000);
+            session.disconnect();
+            return true;
+        } catch (JSchException e) {
+            log.error("Erro ao conectar com Mikrotik: {}", e.getMessage());
+            throw new MikrotikConnectionException("Falha ao conectar com servidor Mikrotik: " + e.getMessage());
+        }
+    }
+
+    public List<String> executeCommand(String host, Integer port, String username, String password, String command) {
+        List<String> result = new ArrayList<>();
+        List<String> errors = new ArrayList<>();
+
+        log.info(">>> EXECUTANDO COMANDO MIKROTIK <<<");
+        log.info("Host: {}:{}", host, port);
+        log.info("Comando: {}", command);
+
+        try {
+            JSch jsch = new JSch();
+            Session session = jsch.getSession(username, host, port);
+            session.setPassword(password);
+            session.setConfig("StrictHostKeyChecking", "no");
+            session.connect(5000);
+
+            ChannelExec channelExec = (ChannelExec) session.openChannel("exec");
+            channelExec.setCommand(command);
+            channelExec.setInputStream(null);
+
+            // Capturar STDOUT
+            BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(channelExec.getInputStream())
+            );
+
+            // Capturar STDERR
+            BufferedReader errorReader = new BufferedReader(
+                    new InputStreamReader(channelExec.getErrStream())
+            );
+
+            channelExec.connect();
+
+            String line;
+            while ((line = reader.readLine()) != null) {
+                result.add(line);
+                log.info("STDOUT: {}", line);
+            }
+
+            while ((line = errorReader.readLine()) != null) {
+                errors.add(line);
+                log.error("STDERR: {}", line);
+            }
+
+            int exitStatus = channelExec.getExitStatus();
+            log.info("Exit Status: {}", exitStatus);
+
+            channelExec.disconnect();
+            session.disconnect();
+
+            if (!errors.isEmpty()) {
+                log.error("❌ COMANDO EXECUTADO COM ERROS!");
+                throw new MikrotikConnectionException("Erro no Mikrotik: " + String.join(", ", errors));
+            }
+
+            if (exitStatus != 0 && exitStatus != -1) {
+                log.error("❌ COMANDO RETORNOU EXIT STATUS: {}", exitStatus);
+            } else {
+                log.info("✅ COMANDO EXECUTADO COM SUCESSO");
+            }
+
+            return result;
+        } catch (JSchException | java.io.IOException e) {
+            log.error("❌ ERRO AO EXECUTAR COMANDO NO MIKROTIK: {}", e.getMessage());
+            throw new MikrotikConnectionException("Erro ao executar comando: " + e.getMessage());
+        }
+    }
+
+    public void createPppoeUser(String host, Integer port, String username, String password,
+                               String pppoeUsername, String pppoePassword, String profileName) {
+        String command = String.format(
+                "/ppp secret add name=\"%s\" password=\"%s\" profile=\"%s\" service=pppoe",
+                pppoeUsername, pppoePassword, profileName
+        );
+        executeCommand(host, port, username, password, command);
+        log.info("Usuário PPPoE criado: {}", pppoeUsername);
+    }
+
+    /**
+     * Criar usuário PPPoE com comentário (incluindo endereço)
+     */
+    public void createPppoeUserWithComment(String host, Integer port, String username, String password,
+                                          String pppoeUsername, String pppoePassword, String profileName,
+                                          String comment) {
+        // Escapar aspas no comentário
+        String escapedComment = comment.replace("\"", "\\\"");
+
+        String command = String.format(
+                "/ppp secret add name=\"%s\" password=\"%s\" profile=\"%s\" service=pppoe comment=\"%s\"",
+                pppoeUsername, pppoePassword, profileName, escapedComment
+        );
+        executeCommand(host, port, username, password, command);
+        log.info("Usuário PPPoE criado com comentário: {} - {}", pppoeUsername, comment);
+    }
+
+    public void deletePppoeUser(String host, Integer port, String username, String password, String pppoeUsername) {
+        String command = String.format("/ppp secret remove [find name=\"%s\"]", pppoeUsername);
+        executeCommand(host, port, username, password, command);
+        log.info("Usuário PPPoE deletado: {}", pppoeUsername);
+    }
+
+    public void disablePppoeUser(String host, Integer port, String username, String password, String pppoeUsername) {
+        String command = String.format("/ppp secret disable [find name=\"%s\"]", pppoeUsername);
+        executeCommand(host, port, username, password, command);
+        log.info("Usuário PPPoE desativado: {}", pppoeUsername);
+    }
+
+    public void enablePppoeUser(String host, Integer port, String username, String password, String pppoeUsername) {
+        String command = String.format("/ppp secret enable [find name=\"%s\"]", pppoeUsername);
+        executeCommand(host, port, username, password, command);
+        log.info("Usuário PPPoE ativado: {}", pppoeUsername);
+    }
+
+    /**
+     * Alterar perfil de um usuário PPPoE
+     */
+    public void changePppoeUserProfile(String host, Integer port, String username, String password,
+                                      String pppoeUsername, String newProfile) {
+        log.info("==========================================================");
+        log.info("ALTERANDO PERFIL PPPoE NO MIKROTIK");
+        log.info("Usuário: {}", pppoeUsername);
+        log.info("Novo Perfil: {}", newProfile);
+        log.info("==========================================================");
+
+        // Usar aspas ao redor dos valores para garantir que funcionem no Mikrotik
+        String command = String.format("/ppp secret set [find name=\"%s\"] profile=\"%s\"",
+                pppoeUsername, newProfile);
+
+        try {
+            List<String> result = executeCommand(host, port, username, password, command);
+
+            if (result != null && !result.isEmpty()) {
+                log.info("Resultado do comando: {}", String.join(", ", result));
+            }
+
+            log.info("✅ Perfil do usuário PPPoE {} alterado para: {}", pppoeUsername, newProfile);
+            log.info("==========================================================");
+
+        } catch (Exception e) {
+            log.error("❌ FALHA AO ALTERAR PERFIL!");
+            log.error("Usuário: {}", pppoeUsername);
+            log.error("Perfil tentado: {}", newProfile);
+            log.error("Erro: {}", e.getMessage());
+            log.error("==========================================================");
+            throw e;
+        }
+    }
+
+    /**
+     * Desconectar usuário PPPoE ativo
+     */
+    public void disconnectActivePppoeUser(String host, Integer port, String username, String password,
+                                         String pppoeUsername) {
+        // Usar aspas ao redor do nome
+        String command = String.format("/ppp active remove [find name=\"%s\"]", pppoeUsername);
+        executeCommand(host, port, username, password, command);
+        log.info("Usuário PPPoE {} desconectado das conexões ativas", pppoeUsername);
+    }
+
+    /**
+     * Criar perfil PPPoE no Mikrotik
+     */
+    public void createPppoeProfile(String host, Integer port, String username, String password,
+                                  String profileName, Long maxBitrateDl, Long maxBitrateUl,
+                                  Integer sessionTimeout, String description) {
+        log.info("==========================================================");
+        log.info("CRIANDO PERFIL PPPoE NO MIKROTIK");
+        log.info("Nome: {}", profileName);
+        log.info("Download: {} bps", maxBitrateDl);
+        log.info("Upload: {} bps", maxBitrateUl);
+        log.info("==========================================================");
+
+        // Converter bps para formato Mikrotik (ex: 10M/20M)
+        String rateLimit = formatBandwidth(maxBitrateUl) + "/" + formatBandwidth(maxBitrateDl);
+
+        StringBuilder commandBuilder = new StringBuilder();
+        commandBuilder.append(String.format("/ppp profile add name=\"%s\"", profileName));
+
+        if (maxBitrateDl != null && maxBitrateUl != null && maxBitrateDl > 0 && maxBitrateUl > 0) {
+            commandBuilder.append(String.format(" rate-limit=\"%s\"", rateLimit));
+        }
+
+        if (sessionTimeout != null && sessionTimeout > 0) {
+            commandBuilder.append(String.format(" session-timeout=%d", sessionTimeout));
+        }
+
+        if (description != null && !description.isEmpty()) {
+            String escapedDesc = description.replace("\"", "\\\"");
+            commandBuilder.append(String.format(" comment=\"%s\"", escapedDesc));
+        }
+
+        executeCommand(host, port, username, password, commandBuilder.toString());
+        log.info("✅ Perfil PPPoE {} criado com sucesso no Mikrotik", profileName);
+    }
+
+    /**
+     * Atualizar perfil PPPoE no Mikrotik
+     */
+    public void updatePppoeProfile(String host, Integer port, String username, String password,
+                                  String oldProfileName, String newProfileName,
+                                  Long maxBitrateDl, Long maxBitrateUl,
+                                  Integer sessionTimeout, String description) {
+        log.info("==========================================================");
+        log.info("ATUALIZANDO PERFIL PPPoE NO MIKROTIK");
+        log.info("Perfil: {}", oldProfileName);
+        log.info("==========================================================");
+
+        String rateLimit = formatBandwidth(maxBitrateUl) + "/" + formatBandwidth(maxBitrateDl);
+
+        StringBuilder commandBuilder = new StringBuilder();
+        commandBuilder.append(String.format("/ppp profile set [find name=\"%s\"]", oldProfileName));
+
+        // Se o nome mudou
+        if (!oldProfileName.equals(newProfileName)) {
+            commandBuilder.append(String.format(" name=\"%s\"", newProfileName));
+        }
+
+        if (maxBitrateDl != null && maxBitrateUl != null && maxBitrateDl > 0 && maxBitrateUl > 0) {
+            commandBuilder.append(String.format(" rate-limit=\"%s\"", rateLimit));
+        }
+
+        if (sessionTimeout != null && sessionTimeout > 0) {
+            commandBuilder.append(String.format(" session-timeout=%d", sessionTimeout));
+        }
+
+        if (description != null && !description.isEmpty()) {
+            String escapedDesc = description.replace("\"", "\\\"");
+            commandBuilder.append(String.format(" comment=\"%s\"", escapedDesc));
+        }
+
+        executeCommand(host, port, username, password, commandBuilder.toString());
+        log.info("✅ Perfil PPPoE {} atualizado com sucesso no Mikrotik", newProfileName);
+    }
+
+    /**
+     * Deletar perfil PPPoE do Mikrotik
+     */
+    public void deletePppoeProfile(String host, Integer port, String username, String password,
+                                  String profileName) {
+        log.info("Deletando perfil PPPoE do Mikrotik: {}", profileName);
+        String command = String.format("/ppp profile remove [find name=\"%s\"]", profileName);
+        executeCommand(host, port, username, password, command);
+        log.info("✅ Perfil PPPoE {} deletado do Mikrotik", profileName);
+    }
+
+    /**
+     * Atualizar senha de usuário PPPoE
+     */
+    public void updatePppoeUserPassword(String host, Integer port, String username, String password,
+                                       String pppoeUsername, String newPassword) {
+        log.info("Atualizando senha do usuário PPPoE: {}", pppoeUsername);
+        String command = String.format("/ppp secret set [find name=\"%s\"] password=\"%s\"",
+                pppoeUsername, newPassword);
+        executeCommand(host, port, username, password, command);
+        log.info("✅ Senha do usuário {} atualizada no Mikrotik", pppoeUsername);
+    }
+
+    /**
+     * Formatar bandwidth de bps para formato Mikrotik (k, M, G)
+     */
+    private String formatBandwidth(Long bps) {
+        if (bps == null || bps == 0) {
+            return "0";
+        }
+
+        if (bps >= 1_000_000_000) {
+            return (bps / 1_000_000_000) + "G";
+        } else if (bps >= 1_000_000) {
+            return (bps / 1_000_000) + "M";
+        } else if (bps >= 1_000) {
+            return (bps / 1_000) + "k";
+        }
+        return bps.toString();
+    }
+
+    public List<String> listActivePppoeConnections(String host, Integer port, String username, String password) {
+        String command = "/ppp active print";
+        return executeCommand(host, port, username, password, command);
+    }
+
+    public List<String> listPppoeUsers(String host, Integer port, String username, String password) {
+        String command = "/ppp secret print";
+        return executeCommand(host, port, username, password, command);
+    }
+
+    public List<MikrotikPppoeUserDTO> getPppoeUsersStructured(String host, Integer port, String username, String password) {
+        List<MikrotikPppoeUserDTO> users = new ArrayList<>();
+
+        try {
+            // Comando para listar secrets PPPoE com detalhes
+            String command = "/ppp secret print detail";
+            List<String> output = executeCommand(host, port, username, password, command);
+
+            MikrotikPppoeUserDTO currentUser = null;
+
+            for (String line : output) {
+                line = line.trim();
+
+                // Nova entrada de usuário
+                if (line.startsWith("Flags:") || line.matches("^\\d+.*")) {
+                    if (currentUser != null && currentUser.getUsername() != null) {
+                        users.add(currentUser);
+                    }
+                    currentUser = new MikrotikPppoeUserDTO();
+                    currentUser.setDisabled(line.contains("X") || line.contains("D"));
+                }
+
+                if (currentUser != null) {
+                    // Parsear campos
+                    if (line.contains("name=")) {
+                        currentUser.setUsername(extractValue(line, "name"));
+                    }
+                    if (line.contains("password=")) {
+                        currentUser.setPassword(extractValue(line, "password"));
+                    }
+                    if (line.contains("profile=")) {
+                        currentUser.setProfile(extractValue(line, "profile"));
+                    }
+                    if (line.contains("service=")) {
+                        currentUser.setService(extractValue(line, "service"));
+                    }
+                    if (line.contains("comment=")) {
+                        currentUser.setComment(extractValue(line, "comment"));
+                    }
+                }
+            }
+
+            // Adicionar último usuário
+            if (currentUser != null && currentUser.getUsername() != null) {
+                users.add(currentUser);
+            }
+
+            log.info("Total de {} usuários PPPoE encontrados no Mikrotik", users.size());
+            return users;
+
+        } catch (Exception e) {
+            log.error("Erro ao buscar usuários PPPoE do Mikrotik: {}", e.getMessage());
+            throw new MikrotikConnectionException("Erro ao buscar usuários PPPoE: " + e.getMessage());
+        }
+    }
+
+    private String extractValue(String line, String key) {
+        try {
+            // Padrão: key="value" ou key=value
+            Pattern pattern = Pattern.compile(key + "=\"?([^\"\\s]+)\"?");
+            Matcher matcher = pattern.matcher(line);
+            if (matcher.find()) {
+                return matcher.group(1);
+            }
+        } catch (Exception e) {
+            log.warn("Erro ao extrair valor de '{}': {}", key, e.getMessage());
+        }
+        return null;
+    }
+
+    public List<MikrotikPppoeProfileDTO> getPppoeProfilesStructured(String host, Integer port, String username, String password) {
+        List<MikrotikPppoeProfileDTO> profiles = new ArrayList<>();
+
+        try {
+            // Comando para listar profiles PPPoE com detalhes
+            String command = "/ppp profile print detail";
+            List<String> output = executeCommand(host, port, username, password, command);
+
+            MikrotikPppoeProfileDTO currentProfile = null;
+
+            for (String line : output) {
+                line = line.trim();
+
+                // Nova entrada de profile
+                if (line.startsWith("Flags:") || line.matches("^\\d+.*")) {
+                    if (currentProfile != null && currentProfile.getName() != null) {
+                        profiles.add(currentProfile);
+                    }
+                    currentProfile = new MikrotikPppoeProfileDTO();
+                    currentProfile.setDisabled(line.contains("X") || line.contains("D"));
+                }
+
+                if (currentProfile != null) {
+                    // Parsear campos
+                    if (line.contains("name=")) {
+                        currentProfile.setName(extractValue(line, "name"));
+                    }
+                    if (line.contains("local-address=")) {
+                        currentProfile.setLocalAddress(extractValue(line, "local-address"));
+                    }
+                    if (line.contains("remote-address=")) {
+                        currentProfile.setRemoteAddress(extractValue(line, "remote-address"));
+                    }
+                    if (line.contains("rate-limit=")) {
+                        currentProfile.setRateLimit(extractValue(line, "rate-limit"));
+                    }
+                    if (line.contains("session-timeout=")) {
+                        currentProfile.setSessionTimeout(extractValue(line, "session-timeout"));
+                    }
+                    if (line.contains("comment=")) {
+                        currentProfile.setComment(extractValue(line, "comment"));
+                    }
+                }
+            }
+
+            // Adicionar último profile
+            if (currentProfile != null && currentProfile.getName() != null) {
+                profiles.add(currentProfile);
+            }
+
+            log.info("Total de {} profiles PPPoE encontrados no Mikrotik", profiles.size());
+            return profiles;
+
+        } catch (Exception e) {
+            log.error("Erro ao buscar profiles PPPoE do Mikrotik: {}", e.getMessage());
+            throw new MikrotikConnectionException("Erro ao buscar profiles PPPoE: " + e.getMessage());
+        }
+    }
+}
