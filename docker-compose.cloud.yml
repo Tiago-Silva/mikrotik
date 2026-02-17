@@ -1,20 +1,18 @@
 version: '3.8'
 
 services:
-  # Database Service
+  # Database Service: MySQL 8.0
   mysql:
     image: mysql:8.0
     container_name: mikrotik-mysql
-    # Carrega todas as variáveis do seu arquivo .env.cloud automaticamente
-    env_file: .env.cloud
+    restart: unless-stopped
+    env_file: .env.cloud # Centraliza a configuração
     environment:
-      # Valores reserva caso o .env falhe
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-mikrotik_db}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
     volumes:
       - mysql_data:/var/lib/mysql
-      # Ajustado para o caminho relativo dentro da pasta do sistema
-      - ./backend/documentation/schema.sql:/docker-entrypoint-initdb.d/init.sql
+      # Removido o schema.sql para que o Flyway assuma o controle total
     networks:
       - mikrotik-network
     healthcheck:
@@ -22,52 +20,49 @@ services:
       timeout: 20s
       retries: 10
       interval: 10s
-    restart: unless-stopped
     deploy:
       resources:
         limits:
-          memory: 1G # Aumentado: você tem 12GB totais
+          memory: 1G # MySQL em produção com folga de memória
 
-  # Backend Service
+  # Backend Service: Spring Boot (Java 21)
   api:
     build:
-      context: ./backend
+      context: ./mikrotik # Nome da pasta do backend no seu servidor
       dockerfile: Dockerfile
     container_name: mikrotik-app
+    restart: unless-stopped
     env_file: .env.cloud
     depends_on:
       mysql:
-        condition: service_healthy
+        condition: service_healthy # Só inicia após o MySQL estar pronto
     ports:
-      # ESSENCIAL: O navegador do cliente precisa acessar a API via IP Público
-      - "8080:8080"
+      - "8080:8080" # Necessário para o frontend acessar a API via IP Público
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: ${MYSQL_USER}
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
-      # O context-path /api exige que o frontend chame http://IP:8080/api/...
-      SERVER_SERVLET_CONTEXT_PATH: /api
+      # O Flyway usará automaticamente estas credenciais para rodar as migrations
     networks:
       - mikrotik-network
-    restart: unless-stopped
     deploy:
       resources:
         limits:
-          memory: 2G # Spring Boot 21 em ARM voa com 2GB
+          memory: 2G # Aproveitando os 12GB da Oracle
 
-  # Frontend Service
+  # Frontend Service: React + Vite (Nginx)
   frontend:
     build:
-      context: ./frontend
+      context: ./mikrotik-dash # Nome da pasta do frontend no seu servidor
       dockerfile: Dockerfile
     container_name: mikrotik-frontend
-    ports:
-      - "80:80"
+    restart: unless-stopped
     depends_on:
       - api
+    ports:
+      - "80:80"
     networks:
       - mikrotik-network
-    restart: unless-stopped
     deploy:
       resources:
         limits:
