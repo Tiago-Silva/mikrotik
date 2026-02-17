@@ -1,0 +1,19 @@
+package br.com.mikrotik.features.network.pppoe.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class MikrotikPppoeUserDTO {
+    private String username;
+    private String password;
+    private String profile;
+    private String service;
+    private Boolean disabled;
+    private String comment;
+}

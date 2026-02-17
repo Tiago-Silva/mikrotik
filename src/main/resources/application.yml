@@ -63,9 +63,13 @@ logging:
   level:
     root: ${LOGGING_LEVEL_ROOT:INFO}
     br.com.mikrotik: ${LOGGING_LEVEL_BR_COM_MIKROTIK:DEBUG}
+    br.com.mikrotik.features.network.service.NetworkIntegrationService: DEBUG
+    br.com.mikrotik.features.contracts.service.ContractService: DEBUG
     org.springframework.security: ${LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY:INFO}
+    org.springframework.scheduling: INFO
+    org.springframework.retry: DEBUG
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
 
 # ========== SWAGGER ==========
 springdoc:
@@ -75,3 +79,14 @@ springdoc:
     path: ${SPRINGDOC_SWAGGER_UI_PATH:/swagger-ui.html}
     operationsSorter: method
     tagsSorter: alpha
+
+# ========== ACTUATOR (Health Check) ==========
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+

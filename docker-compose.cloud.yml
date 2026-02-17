@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  # Database Service
+  mysql:
+    image: mysql:8.0
+    container_name: mikrotik-mysql
+    # Carrega todas as variáveis do seu arquivo .env.cloud automaticamente
+    env_file: .env.cloud
+    environment:
+      # Valores reserva caso o .env falhe
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-mikrotik_db}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      # Ajustado para o caminho relativo dentro da pasta do sistema
+      - ./backend/documentation/schema.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - mikrotik-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$${MYSQL_ROOT_PASSWORD}"]
+      timeout: 20s
+      retries: 10
+      interval: 10s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G # Aumentado: você tem 12GB totais
+
+  # Backend Service
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mikrotik-app
+    env_file: .env.cloud
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      # ESSENCIAL: O navegador do cliente precisa acessar a API via IP Público
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
+      # O context-path /api exige que o frontend chame http://IP:8080/api/...
+      SERVER_SERVLET_CONTEXT_PATH: /api
+    networks:
+      - mikrotik-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2G # Spring Boot 21 em ARM voa com 2GB
+
+  # Frontend Service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: mikrotik-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+    networks:
+      - mikrotik-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+volumes:
+  mysql_data:
+
+networks:
+  mikrotik-network:
+    driver: bridge
