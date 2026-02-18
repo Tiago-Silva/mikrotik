@@ -1,5 +1,9 @@
 package br.com.mikrotik.features.customers.controller;
 
+import br.com.mikrotik.features.auth.model.ModuleAction;
+import br.com.mikrotik.features.auth.model.SystemModule;
+import br.com.mikrotik.shared.infrastructure.security.RequireModuleAccess;
+
 import br.com.mikrotik.features.customers.dto.AddressDTO;
 import br.com.mikrotik.features.customers.service.AddressService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -10,7 +14,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,7 +29,7 @@ public class AddressController {
     private final AddressService addressService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @RequireModuleAccess(module = SystemModule.CUSTOMERS, action = ModuleAction.CREATE)
     @Operation(summary = "Criar novo endereço", description = "Cria um novo endereço para um cliente")
     public ResponseEntity<AddressDTO> create(@Valid @RequestBody AddressDTO dto) {
         log.info("POST /api/addresses - Criando endereço para cliente {}", dto.getCustomerId());
@@ -35,7 +38,7 @@ public class AddressController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.CUSTOMERS, action = ModuleAction.VIEW)
     @Operation(summary = "Buscar endereço por ID", description = "Retorna detalhes de um endereço específico")
     public ResponseEntity<AddressDTO> findById(@PathVariable Long id) {
         log.info("GET /api/addresses/{}", id);
@@ -44,7 +47,7 @@ public class AddressController {
     }
 
     @GetMapping("/customer/{customerId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.CUSTOMERS, action = ModuleAction.VIEW)
     @Operation(summary = "Listar endereços de um cliente", description = "Retorna todos os endereços de um cliente")
     public ResponseEntity<List<AddressDTO>> findByCustomer(@PathVariable Long customerId) {
         log.info("GET /api/addresses/customer/{}", customerId);
@@ -53,7 +56,7 @@ public class AddressController {
     }
 
     @GetMapping("/customer/{customerId}/installation")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.CUSTOMERS, action = ModuleAction.VIEW)
     @Operation(summary = "Buscar endereço de instalação", description = "Retorna o endereço de instalação principal do cliente")
     public ResponseEntity<AddressDTO> findInstallationAddress(@PathVariable Long customerId) {
         log.info("GET /api/addresses/customer/{}/installation", customerId);
@@ -62,7 +65,7 @@ public class AddressController {
     }
 
     @GetMapping("/customer/{customerId}/billing")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.CUSTOMERS, action = ModuleAction.VIEW)
     @Operation(summary = "Buscar endereço de cobrança", description = "Retorna o endereço de cobrança do cliente")
     public ResponseEntity<AddressDTO> findBillingAddress(@PathVariable Long customerId) {
         log.info("GET /api/addresses/customer/{}/billing", customerId);
@@ -71,7 +74,7 @@ public class AddressController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @RequireModuleAccess(module = SystemModule.CUSTOMERS, action = ModuleAction.EDIT)
     @Operation(summary = "Atualizar endereço", description = "Atualiza dados de um endereço existente")
     public ResponseEntity<AddressDTO> update(@PathVariable Long id, @Valid @RequestBody AddressDTO dto) {
         log.info("PUT /api/addresses/{}", id);
@@ -80,7 +83,7 @@ public class AddressController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @RequireModuleAccess(module = SystemModule.CUSTOMERS, action = ModuleAction.DELETE)
     @Operation(summary = "Deletar endereço", description = "Remove um endereço do sistema")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         log.info("DELETE /api/addresses/{}", id);
