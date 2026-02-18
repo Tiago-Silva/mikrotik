@@ -18,49 +18,85 @@ Este documento organiza **toda a documentação** do projeto em categorias lógi
 
 ---
 
-## 📂 Estrutura Organizada
+## 📂 Estrutura Organizada (Package-by-Feature)
 
 ```
 documentation/
 │
-├── 📍 INÍCIO RÁPIDO
-│   ├── QUICK_START.md          ⚡ Setup em 5 minutos
-│   ├── START.md                📖 Instalação detalhada
-│   └── README_PTBR.md          🇧🇷 Docs em Português
-│
-├── 🏗️ ARQUITETURA & PLANEJAMENTO
-│   ├── ARCHITECTURE.md         🏛️ Arquitetura em camadas
-│   ├── REFACTORING_GUIDE.md    🔄 Guia de Refatoração Arquitetural (NOVO)
-│   ├── ROADMAP.md              🗺️ Roadmap (9 fases)
-│   ├── SUMMARY.md              📊 Sumário executivo
-│   └── MANIFEST.md             📋 Manifesto de arquivos
-│
-├── 📡 API & DESENVOLVIMENTO
+├── 📍 DOCUMENTAÇÃO GLOBAL (RAIZ)
+│   ├── README.md               📚 Porta de entrada da documentação
+│   ├── DOCS_INDEX.md           📋 Este arquivo (índice master)
+│   ├── README_PTBR.md          🇧🇷 Docs em Português
 │   ├── API_README.md           📘 Documentação completa da API
-│   ├── DEVELOPMENT.md          🛠️ Guia para desenvolvedores
-│   ├── requests.http           🧪 Exemplos de requisições
-│   └── INDEX.md                📚 Índice de recursos
+│   └── requests.http           🧪 Exemplos de requisições HTTP
 │
-├── ✨ FUNCIONALIDADES ESPECÍFICAS
+├── ⚡ _GETTING-STARTED/ (Setup e Onboarding)
+│   ├── README.md               📚 Guia de navegação de início
+│   ├── QUICK_START.md          ⚡ Setup em 5 minutos (Docker)
+│   ├── START.md                📖 Instalação detalhada
+│   └── DEVELOPMENT.md          🛠️ Guia para desenvolvedores
+│
+├── 🏗️ ARCHITECTURE/ (Arquitetura Técnica)
+│   ├── README.md               📚 Navegação arquitetural
+│   ├── ARCHITECTURE_ACTUAL.md  ⭐ Arquitetura atual (DDD + Package-by-Feature)
+│   ├── ARCHITECTURE.md         🏛️ Arquitetura legada (referência)
+│   ├── REFACTORING_GUIDE.md    🔄 Guia de Refatoração (Hexagonal + Modular Monolith)
+│   └── ROADMAP.md              🗺️ Roadmap de evolução (9 fases)
+│
+├── 🔧 SHARED/ (Recursos Compartilhados)
+│   ├── README.md               📚 Recursos cross-feature
+│   └── TEST_DATA_CPF_CNPJ.md   🧪 CPFs/CNPJs válidos para testes
+│
+├── 🔐 AUTH/ (Autenticação e Usuários)
+│   ├── README.md               📚 Índice da feature
+│   └── USER_MANAGEMENT_API.md  📘 API de gerenciamento de usuários
+│
+├── 👥 CUSTOMERS/ (Clientes)
+│   └── README.md               📚 Índice da feature
+│
+├── 📝 CONTRACTS/ (Contratos e Planos)
+│   └── README.md               📚 Índice da feature
+│
+├── 🧾 INVOICES/ (Faturamento e Cobrança)
+│   ├── README.md               📚 Índice da feature
+│   ├── AUTOMATIC_REACTIVATION_FLOW.md  🔄 Fluxo de reativação automática
+│   ├── MANUAL_SUSPENSION_TEST.md       🧪 Testes manuais de suspensão
+│   ├── TESTING_GUIDE_AUTOMATIC_SUSPENSION.md  📘 Guia de testes
+│   ├── TROUBLESHOOTING_SUSPENSION.md   🚨 Solução de problemas
+│   └── test-suspension.http            📝 Exemplos de requisições
+│
+├── 💰 FINANCIAL/ (Fluxo de Caixa)
+│   ├── README.md               📚 Índice da feature
+│   ├── CASH_FLOW_API_GUIDE.md  📘 Guia completo da API
+│   └── BANK_ACCOUNT_TYPES.md   🏦 Tipos de contas bancárias
+│
+├── 🌐 NETWORK/ (Integração Mikrotik)
+│   ├── README.md               📚 Índice da feature
+│   └── ASYNC_INTEGRATION_GUIDE.md  📡 Guia de integrações assíncronas
+│
+├── 🔄 SYNC/ (Sincronização Mikrotik)
+│   ├── README.md               📚 Índice da feature
+│   ├── FULL_SYNC_GUIDE.md      🚀 Sincronização completa automática
 │   ├── SYNC_USERS.md           🔄 Sincronização de usuários PPPoE
 │   ├── SYNC_PROFILES.md        🔄 Sincronização de perfis PPPoE
 │   ├── SYNC_PROFILES_IMPLEMENTATION.md  🔧 Detalhes técnicos
-│   └── SYNC_FEATURE_SUMMARY.md 📝 Resumo de sincronização
+│   └── SYNC_FEATURE_SUMMARY.md 📝 Resumo de funcionalidades
 │
-├── 📊 STATUS & VALIDAÇÃO
-│   ├── IMPLEMENTATION_COMPLETE.md  ✅ Status de implementação
-│   ├── CHECKLIST.md            ☑️ Checklist de funcionalidades
-│   ├── CONCLUSION.md           🎊 Conclusão e próximos passos
-│   └── INDEX_COMPLETE.md       📑 Índice completo
-│
-├── 📢 MARKETING & DIVULGAÇÃO
-│   └── LINKEDIN_POST.md        💼 Posts para LinkedIn (4 versões)
-│
-├── 🗄️ BANCO DE DADOS
-│   └── schema.sql              💾 Schema completo (multi-tenant)
-│
-└── 🧪 SCRIPTS & FERRAMENTAS
-    └── verify-implementation.sh 🔍 Verificação de implementação
+└── 📦 _ARCHIVE/ (Documentos Históricos)
+    ├── README.md               📚 Explicação do arquivo
+    ├── IMPLEMENTATION_COMPLETE.md  ✅ Status de implementação (MVP)
+    ├── CHECKLIST.md            ☑️ Checklist de funcionalidades
+    ├── CONCLUSION.md           🎊 Conclusão de fase
+    ├── SUMMARY.md              📊 Sumário executivo histórico
+    ├── MANIFEST.md             📋 Manifesto de arquivos
+    ├── INDEX_COMPLETE.md       📑 Índice completo antigo
+    ├── INDEX.md                📚 Índice original
+    ├── ORGANIZATION_SUMMARY.md 📋 Resumo de reorganização
+    ├── REORGANIZATION_SUMMARY.md 📋 Outro resumo de reorganização
+    ├── STRUCTURE.md            📢 Posts para LinkedIn
+    ├── MIGRATION_GUIDE.md      🔄 Guia de migração antigo
+    ├── COMMIT_MESSAGE.txt      📝 Mensagem de commit vazia
+    └── verify-implementation.sh 🔍 Script de verificação antigo
 ```
 
 ---
@@ -71,34 +107,50 @@ documentation/
 
 **Dia 1 - Entendendo o Projeto (1h)**
 1. 📖 [../README.md](../README.md) - Visão geral (15min)
-2. 📊 [SUMMARY.md](SUMMARY.md) - Sumário executivo (10min)
-3. 🏛️ [ARCHITECTURE.md](ARCHITECTURE.md) - Arquitetura (20min)
-4. 📋 [MANIFEST.md](MANIFEST.md) - Estrutura de arquivos (15min)
+2. 🏛️ [architecture/ARCHITECTURE_ACTUAL.md](architecture/ARCHITECTURE_ACTUAL.md) - Arquitetura Package-by-Feature (20min)
+3. 🔄 [architecture/REFACTORING_GUIDE.md](architecture/REFACTORING_GUIDE.md) - Padrões e proteções (15min)
+4. 🗺️ [architecture/ROADMAP.md](architecture/ROADMAP.md) - Roadmap de evolução (10min)
 
 **Dia 1 - Setup do Ambiente (30min)**
-5. ⚡ [QUICK_START.md](QUICK_START.md) - Configuração rápida (20min)
-6. 🛠️ [DEVELOPMENT.md](DEVELOPMENT.md) - Padrões de código (10min)
+5. ⚡ [_getting-started/QUICK_START.md](_getting-started/QUICK_START.md) - Configuração rápida (20min)
+6. 🛠️ [_getting-started/DEVELOPMENT.md](_getting-started/DEVELOPMENT.md) - Padrões de código (10min)
 
-**Dia 2 - Explorando a API (1-2h)**
+**Dia 2 - Explorando Features (1-2h)**
 7. 📘 [API_README.md](API_README.md) - Endpoints completos (30min)
 8. 🧪 [requests.http](requests.http) - Testar requisições (20min)
-9. 🔄 [SYNC_USERS.md](SYNC_USERS.md) - Feature de sincronização (20min)
-10. 🔄 [SYNC_PROFILES.md](SYNC_PROFILES.md) - Sincronização de perfis (20min)
+9. 🔐 [auth/README.md](auth/README.md) - Autenticação e usuários (15min)
+10. 🌐 [network/README.md](network/README.md) - Integração Mikrotik (20min)
+11. 🔄 [sync/README.md](sync/README.md) - Sincronização (15min)
 
-**Dia 3 - Validação (30min)**
-11. ☑️ [CHECKLIST.md](CHECKLIST.md) - Funcionalidades (15min)
-12. ✅ [IMPLEMENTATION_COMPLETE.md](IMPLEMENTATION_COMPLETE.md) - Status (15min)
+**Dia 3 - Features de Negócio (1h)**
+12. 👥 [customers/README.md](customers/README.md) - Clientes (10min)
+13. 📝 [contracts/README.md](contracts/README.md) - Contratos (15min)
+14. 🧾 [invoices/README.md](invoices/README.md) - Faturamento (20min)
+15. 💰 [financial/README.md](financial/README.md) - Fluxo de caixa (15min)
 
-### 📚 Referência Rápida
+### 📚 Referência Rápida por Feature
+
+| Feature | README | Documentação Principal |
+|---------|--------|------------------------|
+| 🔐 Autenticação | [auth/README.md](auth/README.md) | [USER_MANAGEMENT_API.md](auth/USER_MANAGEMENT_API.md) |
+| 👥 Clientes | [customers/README.md](customers/README.md) | [shared/TEST_DATA_CPF_CNPJ.md](shared/TEST_DATA_CPF_CNPJ.md) |
+| 📝 Contratos | [contracts/README.md](contracts/README.md) | Em desenvolvimento |
+| 🧾 Faturamento | [invoices/README.md](invoices/README.md) | [AUTOMATIC_REACTIVATION_FLOW.md](invoices/AUTOMATIC_REACTIVATION_FLOW.md) |
+| 💰 Financeiro | [financial/README.md](financial/README.md) | [CASH_FLOW_API_GUIDE.md](financial/CASH_FLOW_API_GUIDE.md) |
+| 🌐 Rede/Mikrotik | [network/README.md](network/README.md) | [ASYNC_INTEGRATION_GUIDE.md](network/ASYNC_INTEGRATION_GUIDE.md) |
+| 🔄 Sincronização | [sync/README.md](sync/README.md) | [FULL_SYNC_GUIDE.md](sync/FULL_SYNC_GUIDE.md) |
+
+### 📚 Referência Rápida Geral
 
 | Preciso... | Veja... |
 |------------|---------|
-| Criar novo endpoint | [DEVELOPMENT.md](DEVELOPMENT.md) + [API_README.md](API_README.md) |
-| Entender arquitetura | [ARCHITECTURE.md](ARCHITECTURE.md) |
-| Adicionar autenticação | [DEVELOPMENT.md](DEVELOPMENT.md) (seção JWT) |
-| Trabalhar com banco | [schema.sql](schema.sql) |
+| Criar novo endpoint | [_getting-started/DEVELOPMENT.md](_getting-started/DEVELOPMENT.md) + [API_README.md](API_README.md) |
+| Entender arquitetura | [architecture/ARCHITECTURE_ACTUAL.md](architecture/ARCHITECTURE_ACTUAL.md) |
+| Adicionar autenticação | [auth/README.md](auth/README.md) |
+| Integrar com Mikrotik | [network/ASYNC_INTEGRATION_GUIDE.md](network/ASYNC_INTEGRATION_GUIDE.md) |
+| Trabalhar com banco | [../src/main/resources/db/schema.sql](../src/main/resources/db/schema.sql) |
 | Testar API | [requests.http](requests.http) |
-| Ver padrões de código | [DEVELOPMENT.md](DEVELOPMENT.md) |
+| Ver padrões de código | [_getting-started/DEVELOPMENT.md](_getting-started/DEVELOPMENT.md) |
 
 ---
 
@@ -108,15 +160,15 @@ documentation/
 
 **Visão Geral (15min)**
 1. 📖 [../README.md](../README.md) - Overview do projeto
-2. 📊 [SUMMARY.md](SUMMARY.md) - Sumário executivo
+2. 🏛️ [architecture/ARCHITECTURE_ACTUAL.md](architecture/ARCHITECTURE_ACTUAL.md) - Visão técnica de alto nível
 
 **Planejamento (20min)**
-3. 🗺️ [ROADMAP.md](ROADMAP.md) - Roadmap de 9 fases
-4. ✅ [IMPLEMENTATION_COMPLETE.md](IMPLEMENTATION_COMPLETE.md) - O que está pronto
-5. ☑️ [CHECKLIST.md](CHECKLIST.md) - Funcionalidades
+3. 🗺️ [architecture/ROADMAP.md](architecture/ROADMAP.md) - Roadmap de 9 fases
+4. 📘 [API_README.md](API_README.md) - Features disponíveis (endpoints)
 
-**Próximos Passos (10min)**
-6. 🎊 [CONCLUSION.md](CONCLUSION.md) - Conclusão e próximos passos
+**Documentação Histórica (10min)**
+5. ✅ [_archive/IMPLEMENTATION_COMPLETE.md](_archive/IMPLEMENTATION_COMPLETE.md) - Status do MVP original
+6. 🎊 [_archive/CONCLUSION.md](_archive/CONCLUSION.md) - Conclusão e próximos passos
 
 ### 📊 Métricas Rápidas
 
@@ -134,17 +186,17 @@ documentation/
 ### 🎯 Trilha de Deploy (1-2h)
 
 **Instalação (30min)**
-1. 📖 [START.md](START.md) - Instalação detalhada
-2. 💾 [schema.sql](schema.sql) - Banco de dados
+1. 📖 [_getting-started/START.md](_getting-started/START.md) - Instalação detalhada
+2. 💾 [../src/main/resources/db/schema.sql](../src/main/resources/db/schema.sql) - Banco de dados
 3. 🐳 [../docker-compose.yml](../docker-compose.yml) - Docker
 
 **Arquitetura (20min)**
-4. 🏛️ [ARCHITECTURE.md](ARCHITECTURE.md) - Infraestrutura
-5. 📋 [MANIFEST.md](MANIFEST.md) - Arquivos do sistema
+4. 🏛️ [architecture/ARCHITECTURE_ACTUAL.md](architecture/ARCHITECTURE_ACTUAL.md) - Infraestrutura
+5. 🔄 [architecture/REFACTORING_GUIDE.md](architecture/REFACTORING_GUIDE.md) - Padrões técnicos
 
 **Configuração (30min)**
 6. 🔧 [../src/main/resources/application.yml](../src/main/resources/application.yml) - Configs
-7. 📘 [API_README.md](API_README.md) (seção Deploy)
+7. 📘 [API_README.md](API_README.md) - Documentação de endpoints
 
 **Validação (10min)**
 8. 🔍 [verify-implementation.sh](verify-implementation.sh) - Script de verificação

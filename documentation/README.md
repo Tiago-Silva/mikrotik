@@ -4,13 +4,55 @@
 
 ---
 
+## 🆕 Nova Organização (2026-02-18)
+
+**A documentação foi totalmente reorganizada!** 🎉
+
+Agora os documentos estão organizados de forma **hierárquica e lógica**, seguindo a arquitetura **Package-by-Feature** do código:
+
+```
+documentation/
+├── 📍 Raiz (entry-points)        - README, DOCS_INDEX, API_README
+├── ⚡ _getting-started/          - Setup e onboarding
+├── 🏗️ architecture/              - Documentação técnica/arquitetural
+├── 🔧 shared/                    - Recursos compartilhados
+├── 📦 _archive/                  - Documentos históricos
+│
+├── 🔐 auth/                      - Autenticação e usuários
+├── 👥 customers/                 - Gestão de clientes  
+├── 📝 contracts/                 - Contratos e planos
+├── 🧾 invoices/                  - Faturamento e cobrança
+├── 💰 financial/                 - Fluxo de caixa
+├── 🌐 network/                   - Integração Mikrotik
+└── 🔄 sync/                      - Sincronização
+```
+
+Cada pasta tem seu próprio `README.md` como ponto de entrada.
+
+---
+
 ## 🚀 Início Rápido
 
 **Novo no projeto?** Siga esta sequência:
 
-1. **[QUICK_START.md](QUICK_START.md)** - Configure o ambiente em 5 minutos ⚡
-2. **[API_README.md](API_README.md)** - Explore os endpoints da API 📘
-3. **[requests.http](requests.http)** - Teste requisições práticas 🧪
+1. **[_getting-started/QUICK_START.md](_getting-started/QUICK_START.md)** - Configure o ambiente em 5 minutos ⚡
+2. **[DOCS_INDEX.md](DOCS_INDEX.md)** - Índice master por features 📋
+3. **[API_README.md](API_README.md)** - Explore os endpoints da API 📘
+4. **[requests.http](requests.http)** - Teste requisições práticas 🧪
+
+---
+
+## 🎯 Navegação por Feature
+
+| Feature | README | Documentação Principal |
+|---------|--------|------------------------|
+| 🔐 Autenticação | [auth/README.md](auth/README.md) | JWT, usuários, permissões |
+| 👥 Clientes | [customers/README.md](customers/README.md) | Cadastro PF/PJ |
+| 📝 Contratos | [contracts/README.md](contracts/README.md) | Planos, status |
+| 🧾 Faturamento | [invoices/README.md](invoices/README.md) | Suspensão, reativação |
+| 💰 Financeiro | [financial/README.md](financial/README.md) | Fluxo de caixa |
+| 🌐 Rede/Mikrotik | [network/README.md](network/README.md) | Integração assíncrona |
+| 🔄 Sincronização | [sync/README.md](sync/README.md) | Import de PPPoE |
 
 ---
 
@@ -52,15 +94,19 @@ Escolha seu perfil para ver a documentação mais relevante:
 
 ## 📂 Estrutura da Documentação
 
-### 📍 Início Rápido
-- **[QUICK_START.md](QUICK_START.md)** - Setup em 5 minutos
-- **[START.md](START.md)** - Instalação detalhada
-- **[README_PTBR.md](README_PTBR.md)** - Documentação em Português
+### ⚡ Início Rápido ([_getting-started/](_getting-started/))
+- **[QUICK_START.md](_getting-started/QUICK_START.md)** - Setup em 5 minutos
+- **[START.md](_getting-started/START.md)** - Instalação detalhada
+- **[DEVELOPMENT.md](_getting-started/DEVELOPMENT.md)** - Guia do desenvolvedor
 
-### 🏗️ Arquitetura
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Arquitetura em camadas
-- **[ROADMAP.md](ROADMAP.md)** - Roadmap (9 fases)
-- **[SUMMARY.md](SUMMARY.md)** - Sumário executivo
+### 🏗️ Arquitetura ([architecture/](architecture/))
+- **[ARCHITECTURE_ACTUAL.md](architecture/ARCHITECTURE_ACTUAL.md)** - Arquitetura atual ⭐
+- **[ARCHITECTURE.md](architecture/ARCHITECTURE.md)** - Arquitetura legada (referência)
+- **[REFACTORING_GUIDE.md](architecture/REFACTORING_GUIDE.md)** - Guia de refatoração
+- **[ROADMAP.md](architecture/ROADMAP.md)** - Roadmap (9 fases)
+
+### 🔧 Recursos Compartilhados ([shared/](shared/))
+- **[TEST_DATA_CPF_CNPJ.md](shared/TEST_DATA_CPF_CNPJ.md)** - Dados de teste válidos
 
 ### 📡 API & Desenvolvimento
 - **[API_README.md](API_README.md)** - Documentação completa dos 70+ endpoints
