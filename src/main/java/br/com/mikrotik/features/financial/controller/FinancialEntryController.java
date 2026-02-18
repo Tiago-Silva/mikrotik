@@ -1,5 +1,9 @@
 package br.com.mikrotik.features.financial.controller;
 
+import br.com.mikrotik.features.auth.model.ModuleAction;
+import br.com.mikrotik.features.auth.model.SystemModule;
+import br.com.mikrotik.shared.infrastructure.security.RequireModuleAccess;
+
 import br.com.mikrotik.features.financial.dto.FinancialEntryDTO;
 import br.com.mikrotik.features.financial.model.FinancialEntry;
 import br.com.mikrotik.features.financial.service.CashFlowService;
@@ -16,7 +20,6 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -34,7 +37,7 @@ public class FinancialEntryController {
     private final CashFlowService cashFlowService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.CREATE)
     @Operation(summary = "Criar lançamento", description = "Cria novo lançamento financeiro e atualiza saldo da conta")
     public ResponseEntity<FinancialEntryDTO> create(@Valid @RequestBody FinancialEntryDTO dto) {
         log.info("POST /api/financial-entries - Criando lançamento: {}", dto.getDescription());
@@ -43,7 +46,7 @@ public class FinancialEntryController {
     }
 
     @PostMapping("/{id}/reverse")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.CREATE)
     @Operation(summary = "Estornar lançamento", description = "Estorna um lançamento existente")
     public ResponseEntity<FinancialEntryDTO> reverse(@PathVariable Long id) {
         log.info("POST /api/financial-entries/{}/reverse", id);
@@ -52,7 +55,7 @@ public class FinancialEntryController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.VIEW)
     @Operation(summary = "Buscar por ID", description = "Retorna detalhes de um lançamento")
     public ResponseEntity<FinancialEntryDTO> findById(@PathVariable Long id) {
         log.info("GET /api/financial-entries/{}", id);
@@ -61,7 +64,7 @@ public class FinancialEntryController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.VIEW)
     @Operation(summary = "Listar lançamentos", description = "Lista todos os lançamentos (paginado)")
     public ResponseEntity<Page<FinancialEntryDTO>> findAll(
             @PageableDefault(size = 20, sort = "effectiveDate", direction = Sort.Direction.DESC) Pageable pageable) {
@@ -71,7 +74,7 @@ public class FinancialEntryController {
     }
 
     @GetMapping("/bank-account/{bankAccountId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.VIEW)
     @Operation(summary = "Listar por conta", description = "Lista lançamentos de uma conta bancária específica")
     public ResponseEntity<Page<FinancialEntryDTO>> findByBankAccount(
             @PathVariable Long bankAccountId,
@@ -82,7 +85,7 @@ public class FinancialEntryController {
     }
 
     @GetMapping("/period")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.VIEW)
     @Operation(summary = "Listar por período", description = "Lista lançamentos entre duas datas")
     public ResponseEntity<Page<FinancialEntryDTO>> findByPeriod(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
@@ -94,7 +97,7 @@ public class FinancialEntryController {
     }
 
     @GetMapping("/summary/period")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.VIEW)
     @Operation(summary = "Resumo por período", description = "Retorna total de entradas e saídas em um período")
     public ResponseEntity<Map<String, BigDecimal>> getSummaryByPeriod(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
