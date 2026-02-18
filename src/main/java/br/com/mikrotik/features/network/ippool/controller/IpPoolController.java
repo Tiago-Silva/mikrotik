@@ -1,7 +1,10 @@
 package br.com.mikrotik.features.network.ippool.controller;
 
+import br.com.mikrotik.features.auth.model.ModuleAction;
+import br.com.mikrotik.features.auth.model.SystemModule;
 import br.com.mikrotik.features.network.ippool.dto.IpPoolDTO;
 import br.com.mikrotik.features.network.ippool.service.IpPoolService;
+import br.com.mikrotik.shared.infrastructure.security.RequireModuleAccess;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -14,7 +17,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -30,7 +32,7 @@ public class IpPoolController {
     private final IpPoolService ipPoolService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.CREATE)
     @Operation(summary = "Criar novo pool de IP", description = "Cria um novo pool de IP CGNAT")
     public ResponseEntity<IpPoolDTO> create(@Valid @RequestBody IpPoolDTO dto) {
         log.info("POST /api/ip-pools - Criando novo pool de IP: {}", dto.getName());
@@ -39,7 +41,7 @@ public class IpPoolController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.VIEW)
     @Operation(summary = "Buscar pool por ID", description = "Retorna detalhes de um pool específico")
     public ResponseEntity<IpPoolDTO> findById(@PathVariable Long id) {
         log.info("GET /api/ip-pools/{} - Buscando pool", id);
@@ -48,7 +50,7 @@ public class IpPoolController {
     }
 
     @GetMapping("/server/{serverId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.VIEW)
     @Operation(summary = "Listar pools por servidor", description = "Lista pools de IP de um servidor específico (paginado)")
     public ResponseEntity<Page<IpPoolDTO>> findByServer(
             @PathVariable Long serverId,
@@ -59,7 +61,7 @@ public class IpPoolController {
     }
 
     @GetMapping("/server/{serverId}/active")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.VIEW)
     @Operation(summary = "Listar pools ativos por servidor", description = "Retorna apenas pools ativos de um servidor")
     public ResponseEntity<Page<IpPoolDTO>> findByServerAndActive(
             @PathVariable Long serverId,
@@ -71,7 +73,7 @@ public class IpPoolController {
     }
 
     @GetMapping("/server/{serverId}/all")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.VIEW)
     @Operation(summary = "Listar todos os pools", description = "Lista todos os pools de um servidor (paginado)")
     public ResponseEntity<Page<IpPoolDTO>> findAllByServer(
             @PathVariable Long serverId,
@@ -82,7 +84,7 @@ public class IpPoolController {
     }
 
     @GetMapping("/server/{serverId}/active-list")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.VIEW)
     @Operation(summary = "Listar pools ativos", description = "Lista apenas pools ativos de um servidor (paginado)")
     public ResponseEntity<Page<IpPoolDTO>> findActiveByServer(
             @PathVariable Long serverId,
@@ -93,7 +95,7 @@ public class IpPoolController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.EDIT)
     @Operation(summary = "Atualizar pool", description = "Atualiza os dados de um pool de IP")
     public ResponseEntity<IpPoolDTO> update(
             @PathVariable Long id,
@@ -104,7 +106,7 @@ public class IpPoolController {
     }
 
     @PatchMapping("/{id}/active")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.EDIT)
     @Operation(summary = "Ativar/Desativar pool", description = "Altera o status ativo do pool")
     public ResponseEntity<IpPoolDTO> toggleActive(
             @PathVariable Long id,
@@ -115,7 +117,7 @@ public class IpPoolController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.DELETE)
     @Operation(summary = "Deletar pool", description = "Remove um pool de IP do sistema")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         log.info("DELETE /api/ip-pools/{} - Deletando pool", id);
@@ -124,7 +126,7 @@ public class IpPoolController {
     }
 
     @GetMapping("/server/{serverId}/count")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.VIEW)
     @Operation(summary = "Contar pools", description = "Retorna o número total de pools de um servidor")
     public ResponseEntity<Long> countByServer(@PathVariable Long serverId) {
         log.info("GET /api/ip-pools/server/{}/count", serverId);
@@ -133,7 +135,7 @@ public class IpPoolController {
     }
 
     @GetMapping("/server/{serverId}/count-active")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.VIEW)
     @Operation(summary = "Contar pools ativos", description = "Retorna o número de pools ativos de um servidor")
     public ResponseEntity<Long> countActiveByServer(@PathVariable Long serverId) {
         log.info("GET /api/ip-pools/server/{}/count-active", serverId);
