@@ -1,5 +1,9 @@
 package br.com.mikrotik.features.sync.controller;
 
+import br.com.mikrotik.features.auth.model.ModuleAction;
+import br.com.mikrotik.features.auth.model.SystemModule;
+import br.com.mikrotik.shared.infrastructure.security.RequireModuleAccess;
+
 import br.com.mikrotik.features.sync.dto.FullSyncConfigDTO;
 import br.com.mikrotik.features.sync.dto.FullSyncResultDTO;
 import br.com.mikrotik.features.sync.service.FullSyncService;
@@ -10,7 +14,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -24,7 +27,7 @@ public class FullSyncController {
     private final FullSyncService fullSyncService;
 
     @PostMapping("/full-sync")
-    @PreAuthorize("hasRole('ADMIN')")
+    @RequireModuleAccess(module = SystemModule.SYNC, action = ModuleAction.DELETE)
     @Operation(
         summary = "Sincronização completa automática",
         description = """
