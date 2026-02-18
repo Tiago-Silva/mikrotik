@@ -64,8 +64,56 @@ Sistema completo de sincronização automática que resolve o problema de migra�
 │  FASE 5: Criar e Ativar Contratos                           │
 │  ➜ Vincula Cliente + Plano + PPPoE                         │
 │  ➜ Ativa automaticamente (opcional)                         │
+│  ➜ EXCEÇÃO: Profile BLOQUEADO → Suspende financeiramente    │
 │  ➜ Define dia de vencimento padrão                          │
 └─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## ⚠️ Tratamento Especial: Profile BLOQUEADO
+
+### Comportamento Automático
+
+Quando `autoActivateContracts=true`, o sistema detecta automaticamente PPPoE com profile **BLOQUEADO** e aplica regra especial:
+
+**Profile Normal** (ex: PLANO-40M):
+- ✅ Contrato criado em status `DRAFT`
+- ✅ Contrato ativado automaticamente → `ACTIVE`
+
+**Profile BLOQUEADO**:
+- ✅ Contrato criado em status `DRAFT`
+- ⚠️ Contrato **suspenso** automaticamente → `SUSPENDED_FINANCIAL`
+- 📝 Log especial: `"⚠️ Contrato X criado SUSPENSO - Profile BLOQUEADO"`
+
+### Por Quê?
+
+Clientes já bloqueados no MikroTik normalmente estão **inadimplentes**. Criar o contrato diretamente como `SUSPENDED_FINANCIAL` mantém a **consistência** entre MikroTik e sistema:
+
+```
+MikroTik: Profile BLOQUEADO (1kbps - bloqueado)
+   ↓↓↓
+Sistema:  Contract SUSPENDED_FINANCIAL
+```
+
+### Exemplo de Log
+
+```
+✅ Contrato criado: ID 123 | PPPoE: joao123 | Plano: Plano PLANO-40M | Status: ACTIVE
+✅ Contrato criado: ID 124 | PPPoE: maria456 | Plano: Plano PLANO-50M | Status: ACTIVE
+⚠️ Contrato 125 criado SUSPENSO - Profile BLOQUEADO: BLOQUEADO | PPPoE: pedro789
+✅ Contrato criado: ID 126 | PPPoE: ana321 | Plano: Plano PLANO-60M | Status: ACTIVE
+```
+
+### Resultado Final
+
+```
+==========================================================
+>>> SINCRONIZAÇÃO COMPLETA FINALIZADA <<<
+Contratos criados: 500
+Contratos ativados: 485
+Contratos suspensos: 15  ⬅️ PPPoE com profile BLOQUEADO
+==========================================================
 ```
 
 ---
@@ -222,7 +270,8 @@ Planos criados: 15
 PPPoE sincronizados: 500/500
 Clientes criados: 485
 Contratos criados: 500
-Contratos ativados: 500
+Contratos ativados: 485
+Contratos suspensos: 15
 Erros: 0
 Avisos: 15
 ==========================================================
@@ -233,7 +282,9 @@ Avisos: 15
 - ✅ 15 Planos de serviço criados automaticamente
 - ✅ 500 Usuários PPPoE importados
 - ✅ 485 Clientes novos criados (15 já existiam)
-- ✅ 500 Contratos criados e ativados
+- ✅ 500 Contratos criados
+- ✅ 485 Contratos ativados (profile normal)
+- ⚠️ 15 Contratos suspensos (profile BLOQUEADO)
 - ⏰ **Tempo total**: 45 segundos
 
 ---
