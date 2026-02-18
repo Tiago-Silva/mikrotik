@@ -1,5 +1,9 @@
 package br.com.mikrotik.features.financial.controller;
 
+import br.com.mikrotik.features.auth.model.ModuleAction;
+import br.com.mikrotik.features.auth.model.SystemModule;
+import br.com.mikrotik.shared.infrastructure.security.RequireModuleAccess;
+
 import br.com.mikrotik.features.financial.dto.ChartOfAccountsDTO;
 import br.com.mikrotik.features.financial.model.ChartOfAccounts;
 import br.com.mikrotik.features.financial.service.ChartOfAccountsService;
@@ -15,7 +19,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -31,7 +34,7 @@ public class ChartOfAccountsController {
     private final ChartOfAccountsService chartOfAccountsService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.CREATE)
     @Operation(summary = "Criar conta", description = "Cria nova conta no plano de contas")
     public ResponseEntity<ChartOfAccountsDTO> create(@Valid @RequestBody ChartOfAccountsDTO dto) {
         log.info("POST /api/chart-of-accounts - Criando conta: {}", dto.getName());
@@ -40,7 +43,7 @@ public class ChartOfAccountsController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.VIEW)
     @Operation(summary = "Buscar por ID", description = "Retorna detalhes de uma conta")
     public ResponseEntity<ChartOfAccountsDTO> findById(@PathVariable Long id) {
         log.info("GET /api/chart-of-accounts/{}", id);
@@ -49,7 +52,7 @@ public class ChartOfAccountsController {
     }
 
     @GetMapping("/code/{code}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.VIEW)
     @Operation(summary = "Buscar por código", description = "Retorna conta pelo código (ex: 1.1.01)")
     public ResponseEntity<ChartOfAccountsDTO> findByCode(@PathVariable String code) {
         log.info("GET /api/chart-of-accounts/code/{}", code);
@@ -58,7 +61,7 @@ public class ChartOfAccountsController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.VIEW)
     @Operation(summary = "Listar contas", description = "Lista todas as contas (paginado)")
     public ResponseEntity<Page<ChartOfAccountsDTO>> findAll(
             @PageableDefault(size = 50, sort = "code", direction = Sort.Direction.ASC) Pageable pageable) {
@@ -68,7 +71,7 @@ public class ChartOfAccountsController {
     }
 
     @GetMapping("/all")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.VIEW)
     @Operation(summary = "Listar todas", description = "Lista todas as contas sem paginação")
     public ResponseEntity<List<ChartOfAccountsDTO>> findAllList() {
         log.info("GET /api/chart-of-accounts/all");
@@ -77,7 +80,7 @@ public class ChartOfAccountsController {
     }
 
     @GetMapping("/active")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.VIEW)
     @Operation(summary = "Listar ativas", description = "Lista apenas contas ativas")
     public ResponseEntity<List<ChartOfAccountsDTO>> findActive() {
         log.info("GET /api/chart-of-accounts/active");
@@ -86,7 +89,7 @@ public class ChartOfAccountsController {
     }
 
     @GetMapping("/type/{accountType}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.VIEW)
     @Operation(summary = "Listar por tipo", description = "Lista contas por tipo (REVENUE, EXPENSE, etc)")
     public ResponseEntity<Page<ChartOfAccountsDTO>> findByType(
             @PathVariable ChartOfAccounts.AccountType accountType,
@@ -97,7 +100,7 @@ public class ChartOfAccountsController {
     }
 
     @GetMapping("/category/{category}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.VIEW)
     @Operation(summary = "Listar por categoria", description = "Lista contas por categoria")
     public ResponseEntity<Page<ChartOfAccountsDTO>> findByCategory(
             @PathVariable ChartOfAccounts.Category category,
@@ -108,7 +111,7 @@ public class ChartOfAccountsController {
     }
 
     @GetMapping("/parents")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.VIEW)
     @Operation(summary = "Listar contas pai", description = "Lista contas de nível superior (sem parent)")
     public ResponseEntity<List<ChartOfAccountsDTO>> findParents() {
         log.info("GET /api/chart-of-accounts/parents");
@@ -117,7 +120,7 @@ public class ChartOfAccountsController {
     }
 
     @GetMapping("/children/{parentId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.VIEW)
     @Operation(summary = "Listar contas filhas", description = "Lista contas filhas de uma conta pai")
     public ResponseEntity<List<ChartOfAccountsDTO>> findChildren(@PathVariable Long parentId) {
         log.info("GET /api/chart-of-accounts/children/{}", parentId);
@@ -126,7 +129,7 @@ public class ChartOfAccountsController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.EDIT)
     @Operation(summary = "Atualizar conta", description = "Atualiza dados de uma conta")
     public ResponseEntity<ChartOfAccountsDTO> update(@PathVariable Long id, @Valid @RequestBody ChartOfAccountsDTO dto) {
         log.info("PUT /api/chart-of-accounts/{}", id);
@@ -135,7 +138,7 @@ public class ChartOfAccountsController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.DELETE)
     @Operation(summary = "Inativar conta", description = "Inativa uma conta (soft delete)")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         log.info("DELETE /api/chart-of-accounts/{}", id);
@@ -144,7 +147,7 @@ public class ChartOfAccountsController {
     }
 
     @GetMapping("/count")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.VIEW)
     @Operation(summary = "Contar contas", description = "Retorna total de contas")
     public ResponseEntity<Long> count() {
         log.info("GET /api/chart-of-accounts/count");
