@@ -57,18 +57,15 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
+                        // Endpoints públicos (sem autenticação)
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/swagger-ui.html").permitAll()
                         .requestMatchers("/swagger-ui/**").permitAll()
                         .requestMatchers("/v3/api-docs/**").permitAll()
                         .requestMatchers("/v3/api-docs").permitAll()
                         .requestMatchers("/health").permitAll()
-                        .requestMatchers("/api/dashboard/**").hasAnyRole("ADMIN", "OPERATOR", "VIEWER")
-                        .requestMatchers("/api/mikrotik-servers/**").hasAnyRole("ADMIN")
-                        .requestMatchers("/api/profiles/**").hasAnyRole("ADMIN", "OPERATOR")
-                        .requestMatchers("/api/users/**").hasAnyRole("ADMIN", "OPERATOR")
-                        .requestMatchers("/api/connections/**").hasAnyRole("ADMIN", "OPERATOR", "VIEWER")
-                        .requestMatchers("/api/mikrotik-status/**").hasAnyRole("ADMIN", "OPERATOR")
+                        // Todos os outros endpoints requerem apenas autenticação
+                        // O controle fino de permissões é feito por @RequireModuleAccess e @PreAuthorize nos controllers
                         .anyRequest().authenticated()
                 )
                 // Multi-tenant: CompanyContextFilter ANTES do JwtAuthenticationFilter
