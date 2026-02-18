@@ -6,7 +6,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
 import lombok.*;
+
 import java.time.LocalDateTime;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -38,6 +42,14 @@ public class ApiUserDTO {
     @Schema(description = "Usuário ativo", example = "true")
     @Builder.Default
     private Boolean active = true;
+
+    @Schema(description = "Usar permissões customizadas (se false, usa role padrão)", example = "false")
+    @Builder.Default
+    private Boolean useCustomPermissions = false;
+
+    @Schema(description = "Permissões customizadas por módulo")
+    private Set<UserPermissionDTO> customPermissions;
+
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     @Schema(description = "Data de criação", example = "2026-01-01T10:00:00")
     private LocalDateTime createdAt;
@@ -64,6 +76,7 @@ public class ApiUserDTO {
                 .email(this.email)
                 .role(this.role != null ? this.role : UserRole.VIEWER)
                 .active(this.active != null ? this.active : true)
+                .useCustomPermissions(this.useCustomPermissions != null ? this.useCustomPermissions : false)
                 .createdAt(this.createdAt)
                 .updatedAt(this.updatedAt)
                 .lastLogin(this.lastLogin)
@@ -77,6 +90,14 @@ public class ApiUserDTO {
             return null;
         }
         UserRole role = entity.getRole() != null ? entity.getRole() : UserRole.VIEWER;
+
+        Set<UserPermissionDTO> permissions = null;
+        if (entity.getCustomPermissions() != null && !entity.getCustomPermissions().isEmpty()) {
+            permissions = entity.getCustomPermissions().stream()
+                    .map(UserPermissionDTO::fromEntity)
+                    .collect(Collectors.toSet());
+        }
+
         return ApiUserDTO.builder()
                 .id(entity.getId())
                 .companyId(entity.getCompanyId())
@@ -87,6 +108,8 @@ public class ApiUserDTO {
                 .roleDisplayName(role.getDisplayName())
                 .roleDescription(role.getDescription())
                 .active(entity.getActive())
+                .useCustomPermissions(entity.getUseCustomPermissions())
+                .customPermissions(permissions)
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
                 .lastLogin(entity.getLastLogin())
