@@ -138,7 +138,8 @@ public class FullSyncService {
         log.info("Planos: {} criados", result.getCreatedServicePlans());
         log.info("PPPoE Users: {}/{}", result.getSyncedPppoeUsers(), result.getTotalPppoeUsers());
         log.info("Clientes: {} criados", result.getCreatedCustomers());
-        log.info("Contratos: {} criados, {} ativados", result.getCreatedContracts(), result.getActivatedContracts());
+        log.info("Contratos: {} criados, {} ativados, {} suspensos",
+                result.getCreatedContracts(), result.getActivatedContracts(), result.getSuspendedContracts());
         log.info("==========================================================");
 
         return result;
@@ -415,17 +416,31 @@ public class FullSyncService {
 
                     ContractDTO createdContract = contractService.create(contractDTO);
 
-                    // Ativar contrato se configurado
+                    // ⚠️ EXCEÇÃO: PPPoE com profile BLOQUEADO → Suspender financeiramente
+                    String profileName = pppoeUser.getProfile().getName();
+                    boolean isBlocked = isBlockedProfile(profileName);
+
+                    // Ativar ou suspender contrato conforme profile
                     if (config.getAutoActivateContracts()) {
-                        contractService.activate(createdContract.getId());
-                        result.setActivatedContracts(result.getActivatedContracts() + 1);
+                        if (isBlocked) {
+                            // Profile BLOQUEADO: Criar contrato SUSPENSO
+                            contractService.suspendFinancial(createdContract.getId());
+                            result.setSuspendedContracts(result.getSuspendedContracts() + 1);
+                            log.warn("⚠️ Contrato {} criado SUSPENSO - Profile BLOQUEADO: {} | PPPoE: {}",
+                                    createdContract.getId(), profileName, pppoeUser.getUsername());
+                        } else {
+                            // Profile normal: Ativar contrato
+                            contractService.activate(createdContract.getId());
+                            result.setActivatedContracts(result.getActivatedContracts() + 1);
+                        }
                     }
 
                     result.setCreatedContracts(result.getCreatedContracts() + 1);
                     result.getCreatedContractIds().add(createdContract.getId().toString());
 
-                    log.info("Contrato criado: ID {} para cliente {} | PPPoE: {} | Plano: {}",
-                            createdContract.getId(), customerId, pppoeUser.getUsername(), servicePlan.get().getName());
+                    log.info("Contrato criado: ID {} para cliente {} | PPPoE: {} | Plano: {} | Status: {}",
+                            createdContract.getId(), customerId, pppoeUser.getUsername(),
+                            servicePlan.get().getName(), isBlocked ? "SUSPENDED_FINANCIAL" : "ACTIVE");
 
                 } catch (Exception e) {
                     log.error("Erro ao criar contrato para PPPoE {}: {}", pppoeUser.getUsername(), e.getMessage());
@@ -434,8 +449,9 @@ public class FullSyncService {
                 }
             }
 
-            log.info("Contratos: {} criados, {} ativados, {} falharam",
-                    result.getCreatedContracts(), result.getActivatedContracts(), result.getFailedContracts());
+            log.info("Contratos: {} criados, {} ativados, {} suspensos (profile BLOQUEADO), {} falharam",
+                    result.getCreatedContracts(), result.getActivatedContracts(),
+                    result.getSuspendedContracts(), result.getFailedContracts());
 
         } catch (Exception e) {
             log.error("Erro ao criar contratos: {}", e.getMessage(), e);
@@ -552,6 +568,17 @@ public class FullSyncService {
         }
 
         return null;
+    }
+
+    /**
+     * Verifica se o profile é do tipo "BLOQUEADO" (case-insensitive)
+     * ⚠️ CRÍTICO: Profiles bloqueados devem gerar contratos SUSPENDED_FINANCIAL
+     */
+    private boolean isBlockedProfile(String profileName) {
+        if (profileName == null) {
+            return false;
+        }
+        return profileName.trim().equalsIgnoreCase("BLOQUEADO");
     }
 }
 
