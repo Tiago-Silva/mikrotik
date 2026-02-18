@@ -241,7 +241,7 @@ public class ApiUserService {
      */
     @Transactional
     public void updateLastLogin(String username) {
-        apiUserRepository.findWithCompanyByUsername(username)
+        apiUserRepository.findByUsername(username)
                 .ifPresent(user -> {
                     user.updateLastLogin();
                     apiUserRepository.save(user);
@@ -276,22 +276,44 @@ public class ApiUserService {
         }
     }
     /**
-     * Verifica se usuário atual é admin
+     * Obtém usuário atual do contexto de segurança (método público para controllers)
      */
-    private boolean isCurrentUserAdmin() {
-        ApiUser currentUser = getCurrentUser();
-        return currentUser != null && currentUser.isAdmin();
+    public ApiUser getCurrentUser() {
+        String username = getCurrentUsername();
+        if (username == null) {
+            throw new ValidationException("Usuário não autenticado");
+        }
+        return apiUserRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado: " + username));
     }
+
     /**
-     * Obtém usuário atual do contexto de segurança
+     * Obtém usuário atual ou null (uso interno)
      */
-    private ApiUser getCurrentUser() {
+    private ApiUser getCurrentUserOrNull() {
         String username = getCurrentUsername();
         if (username == null) {
             return null;
         }
-        return apiUserRepository.findWithCompanyByUsername(username).orElse(null);
+        return apiUserRepository.findByUsername(username).orElse(null);
     }
+
+    /**
+     * Verifica se o usuário atual é admin
+     */
+    private boolean isCurrentUserAdmin() {
+        ApiUser currentUser = getCurrentUserOrNull();
+        return currentUser != null && currentUser.isAdmin();
+    }
+
+    /**
+     * Verifica se o ID fornecido é do usuário atual (usado em @PreAuthorize)
+     */
+    public boolean isCurrentUser(Long userId) {
+        ApiUser currentUser = getCurrentUserOrNull();
+        return currentUser != null && currentUser.getId().equals(userId);
+    }
+
     /**
      * Obtém username do usuário atual
      */
