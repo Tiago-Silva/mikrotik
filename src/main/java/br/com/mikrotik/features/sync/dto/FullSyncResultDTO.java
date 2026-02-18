@@ -70,6 +70,10 @@ public class FullSyncResultDTO {
     private Integer activatedContracts = 0;
 
     @Builder.Default
+    @Schema(description = "Contratos suspensos por profile bloqueado")
+    private Integer suspendedContracts = 0;
+
+    @Builder.Default
     @Schema(description = "Contratos que falharam")
     private Integer failedContracts = 0;
 
