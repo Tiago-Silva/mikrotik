@@ -1,5 +1,9 @@
 package br.com.mikrotik.features.financial.controller;
 
+import br.com.mikrotik.features.auth.model.ModuleAction;
+import br.com.mikrotik.features.auth.model.SystemModule;
+import br.com.mikrotik.shared.infrastructure.security.RequireModuleAccess;
+
 import br.com.mikrotik.features.financial.dto.TransactionDTO;
 import br.com.mikrotik.features.financial.model.Transaction;
 import br.com.mikrotik.features.financial.service.TransactionService;
@@ -16,7 +20,6 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -32,7 +35,7 @@ public class TransactionController {
     private final TransactionService transactionService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.CREATE)
     @Operation(summary = "Registrar pagamento", description = "Cria uma nova transação e marca a fatura como paga")
     public ResponseEntity<TransactionDTO> create(@Valid @RequestBody TransactionDTO dto) {
         log.info("POST /api/transactions - Registrando pagamento");
@@ -41,7 +44,7 @@ public class TransactionController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.VIEW)
     @Operation(summary = "Buscar transação por ID", description = "Retorna detalhes de uma transação específica")
     public ResponseEntity<TransactionDTO> findById(@PathVariable Long id) {
         log.info("GET /api/transactions/{} - Buscando transação", id);
@@ -50,7 +53,7 @@ public class TransactionController {
     }
 
     @GetMapping("/invoice/{invoiceId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.VIEW)
     @Operation(summary = "Listar transações por fatura", description = "Lista todas as transações de uma fatura (paginado)")
     public ResponseEntity<Page<TransactionDTO>> findByInvoice(
             @PathVariable Long invoiceId,
@@ -61,7 +64,7 @@ public class TransactionController {
     }
 
     @GetMapping("/method/{method}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.VIEW)
     @Operation(summary = "Listar por método", description = "Lista transações por método de pagamento")
     public ResponseEntity<Page<TransactionDTO>> findByMethod(
             @PathVariable Transaction.PaymentMethod method,
@@ -72,7 +75,7 @@ public class TransactionController {
     }
 
     @GetMapping("/period")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.VIEW)
     @Operation(summary = "Listar por período", description = "Lista transações em um período específico (paginado)")
     public ResponseEntity<Page<TransactionDTO>> findByPeriod(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
@@ -84,7 +87,7 @@ public class TransactionController {
     }
 
     @GetMapping("/filter")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.VIEW)
     @Operation(summary = "Buscar com filtros", description = "Busca transações com múltiplos filtros opcionais")
     public ResponseEntity<Page<TransactionDTO>> findByFilters(
             @RequestParam(required = false) Long invoiceId,
@@ -98,7 +101,7 @@ public class TransactionController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.EDIT)
     @Operation(summary = "Atualizar transação", description = "Atualiza os dados de uma transação")
     public ResponseEntity<TransactionDTO> update(
             @PathVariable Long id,
@@ -109,7 +112,7 @@ public class TransactionController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.DELETE)
     @Operation(summary = "Deletar transação", description = "Remove uma transação do sistema")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         log.info("DELETE /api/transactions/{} - Deletando transação", id);
@@ -118,7 +121,7 @@ public class TransactionController {
     }
 
     @GetMapping("/count/method/{method}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.VIEW)
     @Operation(summary = "Contar por método", description = "Retorna o número de transações por método de pagamento")
     public ResponseEntity<Long> countByMethod(@PathVariable Transaction.PaymentMethod method) {
         log.info("GET /api/transactions/count/method/{}", method);
