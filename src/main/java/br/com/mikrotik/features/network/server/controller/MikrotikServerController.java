@@ -1,5 +1,9 @@
 package br.com.mikrotik.features.network.server.controller;
 
+import br.com.mikrotik.features.auth.model.ModuleAction;
+import br.com.mikrotik.features.auth.model.SystemModule;
+import br.com.mikrotik.shared.infrastructure.security.RequireModuleAccess;
+
 import br.com.mikrotik.features.network.server.dto.MikrotikServerDTO;
 import br.com.mikrotik.features.network.server.service.MikrotikServerService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -13,7 +17,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
@@ -30,7 +33,7 @@ public class MikrotikServerController {
     private final MikrotikServerService service;
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @RequireModuleAccess(module = SystemModule.NETWORK, action = ModuleAction.CREATE)
     @Operation(summary = "Criar novo servidor", description = "Adicionar novo servidor Mikrotik à plataforma")
     public ResponseEntity<MikrotikServerDTO> create(@Valid @RequestBody MikrotikServerDTO dto) {
         log.info("Criando novo servidor Mikrotik: {}", dto.getName());
@@ -39,14 +42,14 @@ public class MikrotikServerController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @RequireModuleAccess(module = SystemModule.NETWORK, action = ModuleAction.VIEW)
     @Operation(summary = "Obter servidor por ID", description = "Retorna detalhes de um servidor Mikrotik específico")
     public ResponseEntity<MikrotikServerDTO> getById(@PathVariable Long id) {
         return ResponseEntity.ok(service.getById(id));
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @RequireModuleAccess(module = SystemModule.NETWORK, action = ModuleAction.VIEW)
     @Operation(summary = "Listar todos os servidores", description = "Retorna lista paginada de todos os servidores Mikrotik")
     public ResponseEntity<Page<MikrotikServerDTO>> getAll(
             @PageableDefault(size = 20, sort = "name") Pageable pageable) {
@@ -56,7 +59,7 @@ public class MikrotikServerController {
     // Novos endpoints multi-tenant
 
     @GetMapping("/company/{companyId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.NETWORK, action = ModuleAction.VIEW)
     @Operation(summary = "Listar servidores por empresa", description = "Retorna servidores Mikrotik de uma empresa específica (paginado)")
     public ResponseEntity<Page<MikrotikServerDTO>> findByCompanyId(
             @PathVariable Long companyId,
@@ -67,7 +70,7 @@ public class MikrotikServerController {
     }
 
     @GetMapping("/company/{companyId}/active")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.NETWORK, action = ModuleAction.VIEW)
     @Operation(summary = "Listar servidores ativos por empresa", description = "Retorna apenas servidores ativos de uma empresa")
     public ResponseEntity<Page<MikrotikServerDTO>> findByCompanyIdAndActive(
             @PathVariable Long companyId,
@@ -79,7 +82,7 @@ public class MikrotikServerController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @RequireModuleAccess(module = SystemModule.NETWORK, action = ModuleAction.EDIT)
     @Operation(summary = "Atualizar servidor", description = "Modificar dados de um servidor Mikrotik existente")
     public ResponseEntity<MikrotikServerDTO> update(@PathVariable Long id, @Valid @RequestBody MikrotikServerDTO dto) {
         log.info("Atualizando servidor Mikrotik: {}", id);
@@ -87,7 +90,7 @@ public class MikrotikServerController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @RequireModuleAccess(module = SystemModule.NETWORK, action = ModuleAction.DELETE)
     @Operation(summary = "Deletar servidor", description = "Remover um servidor Mikrotik da plataforma")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         log.info("Deletando servidor Mikrotik: {}", id);
@@ -96,7 +99,7 @@ public class MikrotikServerController {
     }
 
     @PostMapping("/{id}/test-connection")
-    @PreAuthorize("hasRole('ADMIN')")
+    @RequireModuleAccess(module = SystemModule.NETWORK, action = ModuleAction.CREATE)
     @Operation(summary = "Testar conexão", description = "Verificar conectividade com o servidor Mikrotik")
     public ResponseEntity<Boolean> testConnection(@PathVariable Long id) {
         log.info("Testando conexão com servidor Mikrotik: {}", id);

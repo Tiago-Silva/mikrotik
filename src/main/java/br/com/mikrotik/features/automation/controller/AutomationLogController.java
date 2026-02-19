@@ -1,5 +1,9 @@
 package br.com.mikrotik.features.automation.controller;
 
+import br.com.mikrotik.features.auth.model.ModuleAction;
+import br.com.mikrotik.features.auth.model.SystemModule;
+import br.com.mikrotik.shared.infrastructure.security.RequireModuleAccess;
+
 import br.com.mikrotik.features.automation.dto.AutomationLogDTO;
 import br.com.mikrotik.features.automation.model.AutomationLog;
 import br.com.mikrotik.features.automation.service.AutomationLogService;
@@ -15,7 +19,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -31,7 +34,7 @@ public class AutomationLogController {
     private final AutomationLogService automationLogService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @RequireModuleAccess(module = SystemModule.AUTOMATION, action = ModuleAction.CREATE)
     @Operation(summary = "Criar log de automação", description = "Registra uma nova ação automática")
     public ResponseEntity<AutomationLogDTO> create(@Valid @RequestBody AutomationLogDTO dto) {
         log.info("POST /api/automation-logs - Criando log de automação");
@@ -40,7 +43,7 @@ public class AutomationLogController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.AUTOMATION, action = ModuleAction.VIEW)
     @Operation(summary = "Buscar log por ID", description = "Retorna detalhes de um log específico")
     public ResponseEntity<AutomationLogDTO> findById(@PathVariable Long id) {
         log.info("GET /api/automation-logs/{} - Buscando log", id);
@@ -49,7 +52,7 @@ public class AutomationLogController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.AUTOMATION, action = ModuleAction.VIEW)
     @Operation(summary = "Listar todos os logs", description = "Lista logs de automação da empresa (paginado)")
     public ResponseEntity<Page<AutomationLogDTO>> findAll(
             @PageableDefault(size = 20, sort = "executedAt", direction = Sort.Direction.DESC) Pageable pageable) {
@@ -59,7 +62,7 @@ public class AutomationLogController {
     }
 
     @GetMapping("/contract/{contractId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.AUTOMATION, action = ModuleAction.VIEW)
     @Operation(summary = "Listar logs por contrato", description = "Lista logs de um contrato específico")
     public ResponseEntity<Page<AutomationLogDTO>> findByContract(
             @PathVariable Long contractId,
@@ -70,7 +73,7 @@ public class AutomationLogController {
     }
 
     @GetMapping("/action-type/{actionType}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.AUTOMATION, action = ModuleAction.VIEW)
     @Operation(summary = "Listar logs por tipo", description = "Lista logs filtrados por tipo de ação")
     public ResponseEntity<Page<AutomationLogDTO>> findByActionType(
             @PathVariable AutomationLog.ActionType actionType,
@@ -81,7 +84,7 @@ public class AutomationLogController {
     }
 
     @GetMapping("/recent")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.AUTOMATION, action = ModuleAction.VIEW)
     @Operation(summary = "Listar logs recentes", description = "Retorna os logs mais recentes (paginado)")
     public ResponseEntity<Page<AutomationLogDTO>> findRecent(
             @PageableDefault(size = 100, sort = "executedAt", direction = Sort.Direction.DESC) Pageable pageable) {
@@ -91,7 +94,7 @@ public class AutomationLogController {
     }
 
     @GetMapping("/filter")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.AUTOMATION, action = ModuleAction.VIEW)
     @Operation(summary = "Buscar com filtros", description = "Busca logs com múltiplos filtros opcionais")
     public ResponseEntity<Page<AutomationLogDTO>> findByFilters(
             @RequestParam(required = false) Long contractId,
@@ -104,7 +107,7 @@ public class AutomationLogController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @RequireModuleAccess(module = SystemModule.AUTOMATION, action = ModuleAction.DELETE)
     @Operation(summary = "Deletar log", description = "Remove um log de automação do sistema")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         log.info("DELETE /api/automation-logs/{} - Deletando log", id);
@@ -113,7 +116,7 @@ public class AutomationLogController {
     }
 
     @GetMapping("/count")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.AUTOMATION, action = ModuleAction.VIEW)
     @Operation(summary = "Contar logs", description = "Retorna o número total de logs da empresa")
     public ResponseEntity<Long> countByCompany() {
         log.info("GET /api/automation-logs/count");
@@ -122,7 +125,7 @@ public class AutomationLogController {
     }
 
     @GetMapping("/count/action-type/{actionType}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.AUTOMATION, action = ModuleAction.VIEW)
     @Operation(summary = "Contar por tipo", description = "Retorna o número de logs por tipo de ação")
     public ResponseEntity<Long> countByActionType(@PathVariable AutomationLog.ActionType actionType) {
         log.info("GET /api/automation-logs/count/action-type/{}", actionType);
@@ -131,7 +134,7 @@ public class AutomationLogController {
     }
 
     @GetMapping("/count/successful")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.AUTOMATION, action = ModuleAction.VIEW)
     @Operation(summary = "Contar sucessos", description = "Retorna o número de logs com sucesso")
     public ResponseEntity<Long> countSuccessful() {
         log.info("GET /api/automation-logs/count/successful");
@@ -140,7 +143,7 @@ public class AutomationLogController {
     }
 
     @GetMapping("/count/failed")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.AUTOMATION, action = ModuleAction.VIEW)
     @Operation(summary = "Contar falhas", description = "Retorna o número de logs com falha")
     public ResponseEntity<Long> countFailed() {
         log.info("GET /api/automation-logs/count/failed");

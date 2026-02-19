@@ -1,5 +1,9 @@
 package br.com.mikrotik.features.financial.controller;
 
+import br.com.mikrotik.features.auth.model.ModuleAction;
+import br.com.mikrotik.features.auth.model.SystemModule;
+import br.com.mikrotik.shared.infrastructure.security.RequireModuleAccess;
+
 import br.com.mikrotik.features.financial.dto.BankAccountDTO;
 import br.com.mikrotik.features.financial.model.BankAccount;
 import br.com.mikrotik.features.financial.service.BankAccountService;
@@ -15,7 +19,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -31,7 +34,7 @@ public class BankAccountController {
     private final BankAccountService bankAccountService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.CREATE)
     @Operation(summary = "Criar conta bancária", description = "Cria nova conta bancária ou caixa")
     public ResponseEntity<BankAccountDTO> create(@Valid @RequestBody BankAccountDTO dto) {
         log.info("POST /api/bank-accounts - Criando conta: {}", dto.getName());
@@ -40,7 +43,7 @@ public class BankAccountController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.VIEW)
     @Operation(summary = "Buscar conta por ID", description = "Retorna detalhes de uma conta bancária")
     public ResponseEntity<BankAccountDTO> findById(@PathVariable Long id) {
         log.info("GET /api/bank-accounts/{}", id);
@@ -49,7 +52,7 @@ public class BankAccountController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.VIEW)
     @Operation(summary = "Listar contas", description = "Lista todas as contas bancárias (paginado)")
     public ResponseEntity<Page<BankAccountDTO>> findAll(
             @PageableDefault(size = 20, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
@@ -59,7 +62,7 @@ public class BankAccountController {
     }
 
     @GetMapping("/all")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.VIEW)
     @Operation(summary = "Listar todas as contas", description = "Lista todas as contas sem paginação")
     public ResponseEntity<List<BankAccountDTO>> findAllList() {
         log.info("GET /api/bank-accounts/all");
@@ -68,7 +71,7 @@ public class BankAccountController {
     }
 
     @GetMapping("/active")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.VIEW)
     @Operation(summary = "Listar contas ativas", description = "Lista apenas contas ativas")
     public ResponseEntity<Page<BankAccountDTO>> findActive(
             @PageableDefault(size = 20, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
@@ -78,7 +81,7 @@ public class BankAccountController {
     }
 
     @GetMapping("/type/{accountType}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.VIEW)
     @Operation(summary = "Listar por tipo", description = "Lista contas por tipo (CHECKING, CASH, etc)")
     public ResponseEntity<Page<BankAccountDTO>> findByType(
             @PathVariable BankAccount.AccountType accountType,
@@ -89,7 +92,7 @@ public class BankAccountController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.EDIT)
     @Operation(summary = "Atualizar conta", description = "Atualiza dados de uma conta bancária")
     public ResponseEntity<BankAccountDTO> update(@PathVariable Long id, @Valid @RequestBody BankAccountDTO dto) {
         log.info("PUT /api/bank-accounts/{}", id);
@@ -98,7 +101,7 @@ public class BankAccountController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.DELETE)
     @Operation(summary = "Inativar conta", description = "Inativa uma conta bancária (soft delete)")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         log.info("DELETE /api/bank-accounts/{}", id);
@@ -107,7 +110,7 @@ public class BankAccountController {
     }
 
     @GetMapping("/count")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.FINANCIAL, action = ModuleAction.VIEW)
     @Operation(summary = "Contar contas", description = "Retorna total de contas bancárias")
     public ResponseEntity<Long> count() {
         log.info("GET /api/bank-accounts/count");

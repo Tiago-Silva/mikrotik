@@ -1,8 +1,11 @@
 package br.com.mikrotik.features.contracts.controller;
 
+import br.com.mikrotik.features.auth.model.ModuleAction;
+import br.com.mikrotik.features.auth.model.SystemModule;
 import br.com.mikrotik.features.contracts.dto.ContractDTO;
 import br.com.mikrotik.features.contracts.model.Contract;
 import br.com.mikrotik.features.contracts.service.ContractService;
+import br.com.mikrotik.shared.infrastructure.security.RequireModuleAccess;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -15,10 +18,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/contracts")
@@ -31,7 +31,7 @@ public class ContractController {
     private final ContractService contractService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @RequireModuleAccess(module = SystemModule.CONTRACTS, action = ModuleAction.CREATE)
     @Operation(summary = "Criar novo contrato", description = "Cria um novo contrato de serviço")
     public ResponseEntity<ContractDTO> create(@Valid @RequestBody ContractDTO dto) {
         log.info("POST /api/contracts - Criando novo contrato");
@@ -40,7 +40,7 @@ public class ContractController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.CONTRACTS, action = ModuleAction.VIEW)
     @Operation(summary = "Buscar contrato por ID", description = "Retorna detalhes de um contrato específico")
     public ResponseEntity<ContractDTO> findById(@PathVariable Long id) {
         log.info("GET /api/contracts/{} - Buscando contrato", id);
@@ -49,7 +49,7 @@ public class ContractController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.CONTRACTS, action = ModuleAction.VIEW)
     @Operation(summary = "Listar todos os contratos", description = "Lista contratos da empresa (paginado)")
     public ResponseEntity<Page<ContractDTO>> findAll(
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
@@ -59,7 +59,7 @@ public class ContractController {
     }
 
     @GetMapping("/customer/{customerId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.CONTRACTS, action = ModuleAction.VIEW)
     @Operation(summary = "Listar contratos por cliente", description = "Lista contratos de um cliente específico")
     public ResponseEntity<Page<ContractDTO>> findByCustomer(
             @PathVariable Long customerId,
@@ -70,7 +70,7 @@ public class ContractController {
     }
 
     @GetMapping("/status/{status}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.CONTRACTS, action = ModuleAction.VIEW)
     @Operation(summary = "Listar contratos por status", description = "Lista contratos filtrados por status")
     public ResponseEntity<Page<ContractDTO>> findByStatus(
             @PathVariable Contract.ContractStatus status,
@@ -81,7 +81,7 @@ public class ContractController {
     }
 
     @GetMapping("/filter")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.CONTRACTS, action = ModuleAction.VIEW)
     @Operation(summary = "Buscar com filtros", description = "Busca contratos com múltiplos filtros opcionais")
     public ResponseEntity<Page<ContractDTO>> findByFilters(
             @RequestParam(required = false) Long customerId,
@@ -94,7 +94,7 @@ public class ContractController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @RequireModuleAccess(module = SystemModule.CONTRACTS, action = ModuleAction.EDIT)
     @Operation(summary = "Atualizar contrato", description = "Atualiza os dados de um contrato")
     public ResponseEntity<ContractDTO> update(
             @PathVariable Long id,
@@ -105,7 +105,7 @@ public class ContractController {
     }
 
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @RequireModuleAccess(module = SystemModule.CONTRACTS, action = ModuleAction.EDIT)
     @Operation(summary = "Alterar status", description = "Altera o status de um contrato")
     public ResponseEntity<ContractDTO> updateStatus(
             @PathVariable Long id,
@@ -116,7 +116,7 @@ public class ContractController {
     }
 
     @PatchMapping("/{id}/activate")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @RequireModuleAccess(module = SystemModule.CONTRACTS, action = ModuleAction.EDIT)
     @Operation(summary = "Ativar contrato", description = "Ativa um contrato (status ACTIVE)")
     public ResponseEntity<ContractDTO> activate(@PathVariable Long id) {
         log.info("PATCH /api/contracts/{}/activate", id);
@@ -125,7 +125,7 @@ public class ContractController {
     }
 
     @PatchMapping("/{id}/suspend-financial")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @RequireModuleAccess(module = SystemModule.CONTRACTS, action = ModuleAction.EDIT)
     @Operation(summary = "Suspender por inadimplência", description = "Suspende contrato por falta de pagamento")
     public ResponseEntity<ContractDTO> suspendFinancial(@PathVariable Long id) {
         log.info("PATCH /api/contracts/{}/suspend-financial", id);
@@ -134,7 +134,7 @@ public class ContractController {
     }
 
     @PatchMapping("/{id}/suspend-request")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @RequireModuleAccess(module = SystemModule.CONTRACTS, action = ModuleAction.EDIT)
     @Operation(summary = "Suspender por solicitação", description = "Suspende contrato por solicitação do cliente")
     public ResponseEntity<ContractDTO> suspendByRequest(@PathVariable Long id) {
         log.info("PATCH /api/contracts/{}/suspend-request", id);
@@ -143,7 +143,7 @@ public class ContractController {
     }
 
     @PatchMapping("/{id}/cancel")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @RequireModuleAccess(module = SystemModule.CONTRACTS, action = ModuleAction.EDIT)
     @Operation(summary = "Cancelar contrato", description = "Cancela um contrato")
     public ResponseEntity<ContractDTO> cancel(@PathVariable Long id) {
         log.info("PATCH /api/contracts/{}/cancel", id);
@@ -152,7 +152,7 @@ public class ContractController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @RequireModuleAccess(module = SystemModule.CONTRACTS, action = ModuleAction.DELETE)
     @Operation(summary = "Deletar contrato", description = "Remove um contrato do sistema")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         log.info("DELETE /api/contracts/{} - Deletando contrato", id);
@@ -161,7 +161,7 @@ public class ContractController {
     }
 
     @GetMapping("/billing/{billingDay}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @RequireModuleAccess(module = SystemModule.CONTRACTS, action = ModuleAction.EXECUTE)
     @Operation(summary = "Buscar contratos para faturamento", description = "Retorna contratos ativos para faturamento no dia específico (paginado)")
     public ResponseEntity<Page<ContractDTO>> findContractsForBilling(
             @PathVariable Integer billingDay,
@@ -172,7 +172,7 @@ public class ContractController {
     }
 
     @GetMapping("/count")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.CONTRACTS, action = ModuleAction.VIEW)
     @Operation(summary = "Contar contratos", description = "Retorna o número total de contratos da empresa")
     public ResponseEntity<Long> countByCompany() {
         log.info("GET /api/contracts/count");
@@ -181,7 +181,7 @@ public class ContractController {
     }
 
     @GetMapping("/count/status/{status}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.CONTRACTS, action = ModuleAction.VIEW)
     @Operation(summary = "Contar por status", description = "Retorna o número de contratos por status")
     public ResponseEntity<Long> countByStatus(@PathVariable Contract.ContractStatus status) {
         log.info("GET /api/contracts/count/status/{}", status);

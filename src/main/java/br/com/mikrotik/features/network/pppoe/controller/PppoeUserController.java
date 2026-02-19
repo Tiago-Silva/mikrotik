@@ -1,5 +1,9 @@
 package br.com.mikrotik.features.network.pppoe.controller;
 
+import br.com.mikrotik.features.auth.model.ModuleAction;
+import br.com.mikrotik.features.auth.model.SystemModule;
+import br.com.mikrotik.shared.infrastructure.security.RequireModuleAccess;
+
 import br.com.mikrotik.features.network.pppoe.dto.PppoeUserDTO;
 import br.com.mikrotik.features.sync.dto.SyncResultDTO;
 import br.com.mikrotik.features.network.pppoe.service.PppoeUserService;
@@ -14,7 +18,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
@@ -30,7 +33,7 @@ public class PppoeUserController {
     private final PppoeUserService service;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @RequireModuleAccess(module = SystemModule.NETWORK, action = ModuleAction.CREATE)
     @Operation(summary = "Criar novo usuário", description = "Criar novo usuário PPPoE no servidor Mikrotik")
     public ResponseEntity<PppoeUserDTO> create(@Valid @RequestBody PppoeUserDTO dto) {
         log.info("Criando novo usuário PPPoE: {}", dto.getUsername());
@@ -39,21 +42,21 @@ public class PppoeUserController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.NETWORK, action = ModuleAction.VIEW)
     @Operation(summary = "Obter usuário por ID", description = "Retorna detalhes de um usuário específico")
     public ResponseEntity<PppoeUserDTO> getById(@PathVariable Long id) {
         return ResponseEntity.ok(service.getById(id));
     }
 
     @GetMapping("/server/{serverId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.NETWORK, action = ModuleAction.VIEW)
     @Operation(summary = "Listar usuários de um servidor", description = "Retorna todos os usuários de um servidor Mikrotik com paginação")
     public ResponseEntity<Page<PppoeUserDTO>> getByServer(@PathVariable Long serverId, Pageable pageable) {
         return ResponseEntity.ok(service.getByServer(serverId, pageable));
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.NETWORK, action = ModuleAction.VIEW)
     @Operation(summary = "Listar todos os usuários", description = "Retorna lista paginada de todos os usuários PPPoE")
     public ResponseEntity<Page<PppoeUserDTO>> getAll(
             @PageableDefault(size = 20, sort = "id", direction = Sort.Direction.DESC) Pageable pageable) {
@@ -61,7 +64,7 @@ public class PppoeUserController {
     }
 
     @GetMapping("/status/{status}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.NETWORK, action = ModuleAction.VIEW)
     @Operation(summary = "Listar usuários por status", description = "Retorna usuários filtrados por status (ONLINE, OFFLINE, DISABLED)")
     public ResponseEntity<Page<PppoeUserDTO>> getByStatus(
             @PathVariable String status,
@@ -71,7 +74,7 @@ public class PppoeUserController {
     }
 
     @GetMapping("/profile/{profileId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.NETWORK, action = ModuleAction.VIEW)
     @Operation(
         summary = "Listar usuários por perfil",
         description = "Retorna todos os usuários vinculados a um perfil PPPoE específico com paginação"
@@ -84,7 +87,7 @@ public class PppoeUserController {
     }
 
     @GetMapping("/search")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.NETWORK, action = ModuleAction.VIEW)
     @Operation(
         summary = "Buscar usuários",
         description = "Busca usuários por username ou comentário (case-insensitive). Use o parâmetro 'q' para o termo de busca."
@@ -97,7 +100,7 @@ public class PppoeUserController {
     }
 
     @GetMapping("/profile/{profileId}/search")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.NETWORK, action = ModuleAction.VIEW)
     @Operation(
         summary = "Buscar usuários em um perfil específico",
         description = "Busca usuários por username ou comentário dentro de um perfil PPPoE específico (case-insensitive)"
@@ -111,7 +114,7 @@ public class PppoeUserController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @RequireModuleAccess(module = SystemModule.NETWORK, action = ModuleAction.EDIT)
     @Operation(summary = "Atualizar usuário", description = "Modificar dados de um usuário existente")
     public ResponseEntity<PppoeUserDTO> update(@PathVariable Long id, @Valid @RequestBody PppoeUserDTO dto) {
         log.info("Atualizando usuário PPPoE: {}", id);
@@ -119,7 +122,7 @@ public class PppoeUserController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @RequireModuleAccess(module = SystemModule.NETWORK, action = ModuleAction.DELETE)
     @Operation(summary = "Deletar usuário", description = "Remover um usuário PPPoE do servidor Mikrotik")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         log.info("Deletando usuário PPPoE: {}", id);
@@ -128,7 +131,7 @@ public class PppoeUserController {
     }
 
     @PostMapping("/{id}/disable")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @RequireModuleAccess(module = SystemModule.NETWORK, action = ModuleAction.CREATE)
     @Operation(summary = "Desativar usuário", description = "Desativar um usuário PPPoE sem deletá-lo")
     public ResponseEntity<Void> disable(@PathVariable Long id) {
         log.info("Desativando usuário PPPoE: {}", id);
@@ -137,7 +140,7 @@ public class PppoeUserController {
     }
 
     @PostMapping("/{id}/enable")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @RequireModuleAccess(module = SystemModule.NETWORK, action = ModuleAction.CREATE)
     @Operation(summary = "Ativar usuário", description = "Reativar um usuário PPPoE desativado")
     public ResponseEntity<Void> enable(@PathVariable Long id) {
         log.info("Ativando usuário PPPoE: {}", id);
@@ -146,7 +149,7 @@ public class PppoeUserController {
     }
 
     @PostMapping("/sync/server/{serverId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @RequireModuleAccess(module = SystemModule.NETWORK, action = ModuleAction.CREATE)
     @Operation(
         summary = "Sincronizar usuários do Mikrotik",
         description = "Importa todos os usuários PPPoE existentes no servidor Mikrotik para o banco de dados. " +

@@ -1,8 +1,11 @@
 package br.com.mikrotik.features.customers.controller;
 
+import br.com.mikrotik.features.auth.model.ModuleAction;
+import br.com.mikrotik.features.auth.model.SystemModule;
 import br.com.mikrotik.features.customers.dto.CustomerDTO;
 import br.com.mikrotik.features.customers.model.Customer;
 import br.com.mikrotik.features.customers.service.CustomerService;
+import br.com.mikrotik.shared.infrastructure.security.RequireModuleAccess;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -15,7 +18,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -29,7 +31,7 @@ public class CustomerController {
     private final CustomerService customerService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @RequireModuleAccess(module = SystemModule.CUSTOMERS, action = ModuleAction.CREATE)
     @Operation(summary = "Criar novo cliente", description = "Cria um novo cliente (PF ou PJ) no sistema")
     public ResponseEntity<CustomerDTO> create(@Valid @RequestBody CustomerDTO dto) {
         log.info("POST /api/customers - Criando novo cliente: {}", dto.getName());
@@ -38,7 +40,7 @@ public class CustomerController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.CUSTOMERS, action = ModuleAction.VIEW)
     @Operation(summary = "Buscar cliente por ID", description = "Retorna detalhes de um cliente específico")
     public ResponseEntity<CustomerDTO> findById(@PathVariable Long id) {
         log.info("GET /api/customers/{} - Buscando cliente", id);
@@ -47,7 +49,7 @@ public class CustomerController {
     }
 
     @GetMapping("/document/{document}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.CUSTOMERS, action = ModuleAction.VIEW)
     @Operation(summary = "Buscar cliente por documento", description = "Retorna cliente pelo CPF ou CNPJ")
     public ResponseEntity<CustomerDTO> findByDocument(@PathVariable String document) {
         log.info("GET /api/customers/document/{} - Buscando cliente por documento", document);
@@ -56,7 +58,7 @@ public class CustomerController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.CUSTOMERS, action = ModuleAction.VIEW)
     @Operation(summary = "Listar todos os clientes", description = "Lista todos os clientes da empresa com paginação")
     public ResponseEntity<Page<CustomerDTO>> findAll(
             @PageableDefault(size = 20, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
@@ -66,7 +68,7 @@ public class CustomerController {
     }
 
     @GetMapping("/status/{status}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.CUSTOMERS, action = ModuleAction.VIEW)
     @Operation(summary = "Listar clientes por status", description = "Retorna clientes filtrados por status")
     public ResponseEntity<Page<CustomerDTO>> findByStatus(
             @PathVariable Customer.CustomerStatus status,
@@ -77,7 +79,7 @@ public class CustomerController {
     }
 
     @GetMapping("/type/{type}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.CUSTOMERS, action = ModuleAction.VIEW)
     @Operation(summary = "Listar clientes por tipo", description = "Retorna clientes filtrados por tipo (FISICA ou JURIDICA)")
     public ResponseEntity<Page<CustomerDTO>> findByType(
             @PathVariable Customer.CustomerType type,
@@ -88,7 +90,7 @@ public class CustomerController {
     }
 
     @GetMapping("/search")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.CUSTOMERS, action = ModuleAction.VIEW)
     @Operation(summary = "Buscar clientes por nome", description = "Busca clientes por nome (parcial)")
     public ResponseEntity<Page<CustomerDTO>> findByName(
             @RequestParam String name,
@@ -99,7 +101,7 @@ public class CustomerController {
     }
 
     @GetMapping("/city/{city}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.CUSTOMERS, action = ModuleAction.VIEW)
     @Operation(summary = "Buscar clientes por cidade", description = "Retorna clientes de uma cidade específica")
     public ResponseEntity<Page<CustomerDTO>> findByCity(
             @PathVariable String city,
@@ -110,7 +112,7 @@ public class CustomerController {
     }
 
     @GetMapping("/filter")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.CUSTOMERS, action = ModuleAction.VIEW)
     @Operation(summary = "Buscar clientes com filtros", description = "Busca clientes com múltiplos filtros opcionais")
     public ResponseEntity<Page<CustomerDTO>> findByFilters(
             @RequestParam(required = false) String name,
@@ -123,7 +125,7 @@ public class CustomerController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @RequireModuleAccess(module = SystemModule.CUSTOMERS, action = ModuleAction.EDIT)
     @Operation(summary = "Atualizar cliente", description = "Atualiza os dados de um cliente existente")
     public ResponseEntity<CustomerDTO> update(
             @PathVariable Long id,
@@ -134,7 +136,7 @@ public class CustomerController {
     }
 
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @RequireModuleAccess(module = SystemModule.CUSTOMERS, action = ModuleAction.EDIT)
     @Operation(summary = "Alterar status do cliente", description = "Altera o status de um cliente")
     public ResponseEntity<CustomerDTO> updateStatus(
             @PathVariable Long id,
@@ -145,7 +147,7 @@ public class CustomerController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @RequireModuleAccess(module = SystemModule.CUSTOMERS, action = ModuleAction.DELETE)
     @Operation(summary = "Deletar cliente", description = "Remove um cliente do sistema")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         log.info("DELETE /api/customers/{} - Deletando cliente", id);
@@ -154,7 +156,7 @@ public class CustomerController {
     }
 
     @GetMapping("/count/status/{status}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.CUSTOMERS, action = ModuleAction.VIEW)
     @Operation(summary = "Contar clientes por status", description = "Retorna o número de clientes por status")
     public ResponseEntity<Long> countByStatus(@PathVariable Customer.CustomerStatus status) {
         log.info("GET /api/customers/count/status/{} - Contando clientes", status);

@@ -1,5 +1,9 @@
 package br.com.mikrotik.features.invoices.controller;
 
+import br.com.mikrotik.features.auth.model.ModuleAction;
+import br.com.mikrotik.features.auth.model.SystemModule;
+import br.com.mikrotik.shared.infrastructure.security.RequireModuleAccess;
+
 import br.com.mikrotik.features.invoices.dto.InvoiceDTO;
 import br.com.mikrotik.features.invoices.model.Invoice;
 import br.com.mikrotik.features.invoices.service.InvoiceService;
@@ -16,7 +20,6 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -33,7 +36,7 @@ public class InvoiceController {
     private final InvoiceService invoiceService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @RequireModuleAccess(module = SystemModule.INVOICES, action = ModuleAction.CREATE)
     @Operation(summary = "Criar nova fatura", description = "Cria uma nova fatura para um contrato")
     public ResponseEntity<InvoiceDTO> create(@Valid @RequestBody InvoiceDTO dto) {
         log.info("POST /api/invoices - Criando nova fatura");
@@ -42,7 +45,7 @@ public class InvoiceController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.INVOICES, action = ModuleAction.VIEW)
     @Operation(summary = "Buscar fatura por ID", description = "Retorna detalhes de uma fatura específica")
     public ResponseEntity<InvoiceDTO> findById(@PathVariable Long id) {
         log.info("GET /api/invoices/{} - Buscando fatura", id);
@@ -51,7 +54,7 @@ public class InvoiceController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.INVOICES, action = ModuleAction.VIEW)
     @Operation(summary = "Listar todas as faturas", description = "Lista faturas da empresa (paginado)")
     public ResponseEntity<Page<InvoiceDTO>> findAll(
             @PageableDefault(size = 20, sort = "dueDate", direction = Sort.Direction.DESC) Pageable pageable) {
@@ -61,7 +64,7 @@ public class InvoiceController {
     }
 
     @GetMapping("/customer/{customerId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.INVOICES, action = ModuleAction.VIEW)
     @Operation(summary = "Listar faturas por cliente", description = "Lista faturas de um cliente específico")
     public ResponseEntity<Page<InvoiceDTO>> findByCustomer(
             @PathVariable Long customerId,
@@ -72,7 +75,7 @@ public class InvoiceController {
     }
 
     @GetMapping("/status/{status}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.INVOICES, action = ModuleAction.VIEW)
     @Operation(summary = "Listar faturas por status", description = "Lista faturas filtradas por status")
     public ResponseEntity<Page<InvoiceDTO>> findByStatus(
             @PathVariable Invoice.InvoiceStatus status,
@@ -83,7 +86,7 @@ public class InvoiceController {
     }
 
     @GetMapping("/overdue")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.INVOICES, action = ModuleAction.VIEW)
     @Operation(summary = "Listar faturas vencidas", description = "Retorna todas as faturas vencidas e não pagas (paginado)")
     public ResponseEntity<Page<InvoiceDTO>> findOverdue(
             @PageableDefault(size = 50, sort = "dueDate") Pageable pageable) {
@@ -93,7 +96,7 @@ public class InvoiceController {
     }
 
     @GetMapping("/filter")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.INVOICES, action = ModuleAction.VIEW)
     @Operation(summary = "Buscar com filtros", description = "Busca faturas com múltiplos filtros opcionais")
     public ResponseEntity<Page<InvoiceDTO>> findByFilters(
             @RequestParam(required = false) Long customerId,
@@ -106,7 +109,7 @@ public class InvoiceController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @RequireModuleAccess(module = SystemModule.INVOICES, action = ModuleAction.EDIT)
     @Operation(summary = "Atualizar fatura", description = "Atualiza os dados de uma fatura")
     public ResponseEntity<InvoiceDTO> update(
             @PathVariable Long id,
@@ -117,7 +120,7 @@ public class InvoiceController {
     }
 
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @RequireModuleAccess(module = SystemModule.INVOICES, action = ModuleAction.EDIT)
     @Operation(summary = "Alterar status", description = "Altera o status de uma fatura")
     public ResponseEntity<InvoiceDTO> updateStatus(
             @PathVariable Long id,
@@ -128,7 +131,7 @@ public class InvoiceController {
     }
 
     @PatchMapping("/{id}/pay")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @RequireModuleAccess(module = SystemModule.INVOICES, action = ModuleAction.EDIT)
     @Operation(summary = "Marcar como paga", description = "Marca uma fatura como paga")
     public ResponseEntity<InvoiceDTO> markAsPaid(@PathVariable Long id) {
         log.info("PATCH /api/invoices/{}/pay", id);
@@ -137,7 +140,7 @@ public class InvoiceController {
     }
 
     @PatchMapping("/{id}/cancel")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @RequireModuleAccess(module = SystemModule.INVOICES, action = ModuleAction.EDIT)
     @Operation(summary = "Cancelar fatura", description = "Cancela uma fatura")
     public ResponseEntity<InvoiceDTO> cancel(@PathVariable Long id) {
         log.info("PATCH /api/invoices/{}/cancel", id);
@@ -146,7 +149,7 @@ public class InvoiceController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @RequireModuleAccess(module = SystemModule.INVOICES, action = ModuleAction.DELETE)
     @Operation(summary = "Deletar fatura", description = "Remove uma fatura do sistema")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         log.info("DELETE /api/invoices/{} - Deletando fatura", id);
@@ -155,7 +158,7 @@ public class InvoiceController {
     }
 
     @GetMapping("/count")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.INVOICES, action = ModuleAction.VIEW)
     @Operation(summary = "Contar faturas", description = "Retorna o número total de faturas da empresa")
     public ResponseEntity<Long> countByCompany() {
         log.info("GET /api/invoices/count");
@@ -164,7 +167,7 @@ public class InvoiceController {
     }
 
     @GetMapping("/count/status/{status}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.INVOICES, action = ModuleAction.VIEW)
     @Operation(summary = "Contar por status", description = "Retorna o número de faturas por status")
     public ResponseEntity<Long> countByStatus(@PathVariable Invoice.InvoiceStatus status) {
         log.info("GET /api/invoices/count/status/{}", status);

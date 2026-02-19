@@ -1,5 +1,9 @@
 package br.com.mikrotik.features.companies.controller;
 
+import br.com.mikrotik.features.auth.model.ModuleAction;
+import br.com.mikrotik.features.auth.model.SystemModule;
+import br.com.mikrotik.shared.infrastructure.security.RequireModuleAccess;
+
 import br.com.mikrotik.features.companies.dto.CompanyDTO;
 import br.com.mikrotik.shared.dto.PageResponse;
 import br.com.mikrotik.features.companies.service.CompanyService;
@@ -15,7 +19,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -29,7 +32,7 @@ public class CompanyController {
     private final CompanyService companyService;
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @RequireModuleAccess(module = SystemModule.COMPANIES, action = ModuleAction.CREATE)
     @Operation(summary = "Criar nova empresa", description = "Cria uma nova empresa no sistema multi-tenant")
     public ResponseEntity<CompanyDTO> create(@Valid @RequestBody CompanyDTO dto) {
         log.info("POST /api/companies - Criando nova empresa: {}", dto.getName());
@@ -38,7 +41,7 @@ public class CompanyController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.COMPANIES, action = ModuleAction.VIEW)
     @Operation(summary = "Buscar empresa por ID", description = "Retorna detalhes de uma empresa específica")
     public ResponseEntity<CompanyDTO> findById(@PathVariable Long id) {
         log.info("GET /api/companies/{} - Buscando empresa", id);
@@ -47,7 +50,7 @@ public class CompanyController {
     }
 
     @GetMapping("/cnpj/{cnpj}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.COMPANIES, action = ModuleAction.VIEW)
     @Operation(summary = "Buscar empresa por CNPJ", description = "Retorna empresa pelo CNPJ")
     public ResponseEntity<CompanyDTO> findByCnpj(@PathVariable String cnpj) {
         log.info("GET /api/companies/cnpj/{} - Buscando empresa por CNPJ", cnpj);
@@ -56,7 +59,7 @@ public class CompanyController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.COMPANIES, action = ModuleAction.VIEW)
     @Operation(summary = "Listar todas as empresas", description = "Lista todas as empresas com paginação")
     public ResponseEntity<Page<CompanyDTO>> findAll(
             @PageableDefault(size = 20, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
@@ -67,7 +70,7 @@ public class CompanyController {
 
     // Endpoint alternativo com estrutura JSON garantida
     @GetMapping("/v2")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.COMPANIES, action = ModuleAction.VIEW)
     @Operation(summary = "[V2] Listar todas as empresas", description = "Lista empresas com estrutura JSON estável")
     public ResponseEntity<PageResponse<CompanyDTO>> findAllV2(
             @PageableDefault(size = 20, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
@@ -79,7 +82,7 @@ public class CompanyController {
 
 
     @GetMapping("/active")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.COMPANIES, action = ModuleAction.VIEW)
     @Operation(summary = "Listar empresas ativas", description = "Lista apenas empresas ativas")
     public ResponseEntity<Page<CompanyDTO>> findByActive(
             @RequestParam(defaultValue = "true") Boolean active,
@@ -90,7 +93,7 @@ public class CompanyController {
     }
 
     @GetMapping("/search")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.COMPANIES, action = ModuleAction.VIEW)
     @Operation(summary = "Buscar empresas por nome", description = "Busca empresas por nome (parcial)")
     public ResponseEntity<Page<CompanyDTO>> findByName(
             @RequestParam String name,
@@ -101,7 +104,7 @@ public class CompanyController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @RequireModuleAccess(module = SystemModule.COMPANIES, action = ModuleAction.EDIT)
     @Operation(summary = "Atualizar empresa", description = "Atualiza os dados de uma empresa")
     public ResponseEntity<CompanyDTO> update(@PathVariable Long id, @Valid @RequestBody CompanyDTO dto) {
         log.info("PUT /api/companies/{} - Atualizando empresa", id);
@@ -110,7 +113,7 @@ public class CompanyController {
     }
 
     @PatchMapping("/{id}/deactivate")
-    @PreAuthorize("hasRole('ADMIN')")
+    @RequireModuleAccess(module = SystemModule.COMPANIES, action = ModuleAction.EDIT)
     @Operation(summary = "Desativar empresa", description = "Desativa uma empresa (soft delete)")
     public ResponseEntity<Void> deactivate(@PathVariable Long id) {
         log.info("PATCH /api/companies/{}/deactivate", id);
@@ -119,7 +122,7 @@ public class CompanyController {
     }
 
     @PatchMapping("/{id}/activate")
-    @PreAuthorize("hasRole('ADMIN')")
+    @RequireModuleAccess(module = SystemModule.COMPANIES, action = ModuleAction.EDIT)
     @Operation(summary = "Ativar empresa", description = "Ativa uma empresa desativada")
     public ResponseEntity<Void> activate(@PathVariable Long id) {
         log.info("PATCH /api/companies/{}/activate", id);
@@ -128,7 +131,7 @@ public class CompanyController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @RequireModuleAccess(module = SystemModule.COMPANIES, action = ModuleAction.DELETE)
     @Operation(summary = "Deletar empresa", description = "Deleta permanentemente uma empresa (apenas se não houver dependências)")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         log.warn("DELETE /api/companies/{} - Deletando empresa", id);

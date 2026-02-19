@@ -1,5 +1,9 @@
 package br.com.mikrotik.features.network.pppoe.controller;
 
+import br.com.mikrotik.features.auth.model.ModuleAction;
+import br.com.mikrotik.features.auth.model.SystemModule;
+import br.com.mikrotik.shared.infrastructure.security.RequireModuleAccess;
+
 import br.com.mikrotik.features.network.pppoe.dto.PppoeProfileDTO;
 import br.com.mikrotik.features.sync.dto.SyncResultDTO;
 import br.com.mikrotik.features.network.pppoe.service.PppoeProfileService;
@@ -14,7 +18,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
@@ -31,7 +34,7 @@ public class PppoeProfileController {
     private final PppoeProfileService service;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @RequireModuleAccess(module = SystemModule.NETWORK, action = ModuleAction.CREATE)
     @Operation(summary = "Criar novo perfil", description = "Criar novo perfil de PPPoE com limites de banda")
     public ResponseEntity<PppoeProfileDTO> create(@Valid @RequestBody PppoeProfileDTO dto) {
         log.info("Criando novo perfil PPPoE: {}", dto.getName());
@@ -40,14 +43,14 @@ public class PppoeProfileController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.NETWORK, action = ModuleAction.VIEW)
     @Operation(summary = "Obter perfil por ID", description = "Retorna detalhes de um perfil específico")
     public ResponseEntity<PppoeProfileDTO> getById(@PathVariable Long id) {
         return ResponseEntity.ok(service.getById(id));
     }
 
     @GetMapping("/server/{serverId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.NETWORK, action = ModuleAction.VIEW)
     @Operation(summary = "Listar perfis de um servidor", description = "Retorna perfis paginados de um servidor Mikrotik")
     public ResponseEntity<Page<PppoeProfileDTO>> getByServer(
             @PathVariable Long serverId,
@@ -56,7 +59,7 @@ public class PppoeProfileController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'VIEWER')")
+    @RequireModuleAccess(module = SystemModule.NETWORK, action = ModuleAction.VIEW)
     @Operation(summary = "Listar todos os perfis", description = "Retorna lista paginada de todos os perfis PPPoE")
     public ResponseEntity<Page<PppoeProfileDTO>> getAll(
             @PageableDefault(size = 20, sort = "name") Pageable pageable) {
@@ -64,7 +67,7 @@ public class PppoeProfileController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @RequireModuleAccess(module = SystemModule.NETWORK, action = ModuleAction.EDIT)
     @Operation(summary = "Atualizar perfil", description = "Modificar dados de um perfil existente")
     public ResponseEntity<PppoeProfileDTO> update(@PathVariable Long id, @Valid @RequestBody PppoeProfileDTO dto) {
         log.info("Atualizando perfil PPPoE: {}", id);
@@ -72,7 +75,7 @@ public class PppoeProfileController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @RequireModuleAccess(module = SystemModule.NETWORK, action = ModuleAction.DELETE)
     @Operation(summary = "Deletar perfil", description = "Remover um perfil PPPoE da plataforma")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         log.info("Deletando perfil PPPoE: {}", id);
@@ -81,7 +84,7 @@ public class PppoeProfileController {
     }
 
     @PostMapping("/sync/server/{serverId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @RequireModuleAccess(module = SystemModule.NETWORK, action = ModuleAction.CREATE)
     @Operation(
         summary = "Sincronizar profiles do Mikrotik",
         description = "Importa todos os profiles PPPoE existentes no servidor Mikrotik para o banco de dados. " +
