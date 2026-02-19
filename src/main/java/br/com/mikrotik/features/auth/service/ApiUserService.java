@@ -139,6 +139,17 @@ public class ApiUserService {
                     });
             user.setEmail(dto.getEmail());
         }
+        // Atualizar senha se fornecida (apenas ADMIN pode fazer via update)
+        if (dto.getPassword() != null && !dto.getPassword().isBlank()) {
+            if (!isCurrentUserAdmin()) {
+                throw new ValidationException("Apenas administradores podem alterar senha via edição de usuário. Use o endpoint /change-password");
+            }
+            if (dto.getPassword().length() < 6) {
+                throw new ValidationException("Senha deve ter no mínimo 6 caracteres");
+            }
+            user.setPassword(passwordEncoder.encode(dto.getPassword()));
+            log.info("Admin {} resetou senha do usuário ID: {}", getCurrentUsername(), id);
+        }
         // Atualizar campos
         user.setRole(dto.getRole() != null ? dto.getRole() : UserRole.VIEWER);
         user.setActive(dto.getActive() != null ? dto.getActive() : true);
