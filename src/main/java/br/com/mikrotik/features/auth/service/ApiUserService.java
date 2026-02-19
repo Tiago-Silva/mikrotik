@@ -117,10 +117,19 @@ public class ApiUserService {
     @Transactional
     public ApiUserDTO update(Long id, ApiUserDTO dto) {
         log.info("Atualizando usuário ID: {}", id);
+        log.debug("DTO recebido - username: {}, email: {}, role: {}, password presente: {}, password length: {}",
+                dto.getUsername(), dto.getEmail(), dto.getRole(),
+                dto.getPassword() != null,
+                dto.getPassword() != null ? dto.getPassword().length() : 0);
+
         Long companyId = CompanyContextHolder.getCompanyId();
         ApiUser user = apiUserRepository.findById(id)
                 .filter(u -> u.getCompanyId().equals(companyId))
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado com ID: " + id));
+
+        log.debug("Usuário encontrado - ID: {}, username atual: {}, senha atual hash: {}",
+                user.getId(), user.getUsername(), user.getPassword().substring(0, 10) + "...");
+
         // Validar permissões
         validatePermissions(user.getRole(), dto.getRole());
         // Verificar se username mudou e se já existe
@@ -141,20 +150,35 @@ public class ApiUserService {
         }
         // Atualizar senha se fornecida (apenas ADMIN pode fazer via update)
         if (dto.getPassword() != null && !dto.getPassword().isBlank()) {
+            log.debug("Senha fornecida no DTO, verificando permissões...");
             if (!isCurrentUserAdmin()) {
+                log.warn("Tentativa de alterar senha sem ser admin pelo usuário: {}", getCurrentUsername());
                 throw new ValidationException("Apenas administradores podem alterar senha via edição de usuário. Use o endpoint /change-password");
             }
             if (dto.getPassword().length() < 6) {
                 throw new ValidationException("Senha deve ter no mínimo 6 caracteres");
             }
+            String oldPasswordHash = user.getPassword();
             user.setPassword(passwordEncoder.encode(dto.getPassword()));
-            log.info("Admin {} resetou senha do usuário ID: {}", getCurrentUsername(), id);
+            log.info("Admin {} resetou senha do usuário ID: {} - Hash anterior: {}..., Hash novo: {}...",
+                    getCurrentUsername(), id,
+                    oldPasswordHash.substring(0, 10),
+                    user.getPassword().substring(0, 10));
+        } else {
+            log.debug("Senha NÃO fornecida no DTO ou está em branco");
         }
         // Atualizar campos
         user.setRole(dto.getRole() != null ? dto.getRole() : UserRole.VIEWER);
         user.setActive(dto.getActive() != null ? dto.getActive() : true);
+
+        // Atualizar permissões customizadas se fornecidas
+        if (dto.getUseCustomPermissions() != null) {
+            user.setUseCustomPermissions(dto.getUseCustomPermissions());
+        }
+
         user = apiUserRepository.save(user);
-        log.info("Usuário atualizado com sucesso: ID={}", user.getId());
+        log.info("Usuário atualizado com sucesso: ID={}, nova senha hash: {}...",
+                user.getId(), user.getPassword().substring(0, 10));
         return ApiUserDTO.fromEntity(user);
     }
     /**
