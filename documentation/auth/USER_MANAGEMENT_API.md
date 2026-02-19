@@ -170,10 +170,18 @@ Content-Type: application/json
   "username": "maria.silva",
   "email": "maria.novo@example.com",
   "role": "FINANCIAL",
-  "active": true
+  "active": true,
+  "password": "novaSenha123"
 }
 ```
 **Resposta:** `200 OK`
+
+**⚠️ Atenção sobre senha:**
+- O campo `password` é **opcional**
+- Se fornecido, **apenas ADMIN** pode alterar senha via este endpoint
+- OPERATORs e outros devem usar `/change-password` para alterar própria senha
+- Senha mínima de 6 caracteres
+- Senha é automaticamente criptografada com BCrypt
 ---
 ### **9. Alterar Própria Senha**
 ```http
@@ -235,10 +243,11 @@ Authorization: Bearer {token}
 ### **Proteções de Permissão**
 1. ✅ **Não pode criar role superior** à sua própria
 2. ✅ **Não pode editar usuário** com permissão maior/igual
-3. ✅ **Apenas admin** pode resetar senhas
-4. ✅ **Apenas admin** pode ativar/desativar
-5. ✅ **Apenas admin** pode deletar
-6. ✅ **Não pode deletar/desativar** a si mesmo
+3. ✅ **Apenas admin** pode resetar senhas (via `/reset-password` ou campo `password` no `PUT /users/{id}`)
+4. ✅ **Apenas admin** pode alterar senha via `PUT /users/{id}` - outros devem usar `/change-password`
+5. ✅ **Apenas admin** pode ativar/desativar
+6. ✅ **Apenas admin** pode deletar
+7. ✅ **Não pode deletar/desativar** a si mesmo
 ### **Hierarquia de Criação**
 - **ADMIN** → pode criar qualquer role
 - **OPERATOR** → pode criar FINANCIAL, TECHNICAL, VIEWER
