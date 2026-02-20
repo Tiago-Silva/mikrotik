@@ -27,6 +27,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -146,12 +147,34 @@ public class ContractService {
      * Buscar com filtros múltiplos
      */
     @Transactional(readOnly = true)
-    public Page<ContractDTO> findByFilters(Long customerId, Contract.ContractStatus status,
-                                           Long servicePlanId, Pageable pageable) {
-        log.info("Buscando contratos com filtros");
+    public Page<ContractDTO> findByFilters(Long customerId,
+                                           String customerName,
+                                           Contract.ContractStatus status,
+                                           Long servicePlanId,
+                                           BigDecimal amountMin,
+                                           BigDecimal amountMax,
+                                           LocalDate createdFrom,
+                                           LocalDate createdTo,
+                                           Integer billingDayFrom,
+                                           Integer billingDayTo,
+                                           Pageable pageable) {
+        log.info("Buscando contratos com filtros - customerName: {}, status: {}, servicePlanId: {}, " +
+                 "amount: [{}-{}], createdAt: [{}-{}], billingDay: [{}-{}]",
+                 customerName, status, servicePlanId, amountMin, amountMax,
+                 createdFrom, createdTo, billingDayFrom, billingDayTo);
 
         Long companyId = CompanyContextHolder.getCompanyId();
-        Page<Contract> contracts = contractRepository.findByFilters(companyId, customerId, status, servicePlanId, pageable);
+
+        // Converte LocalDate → LocalDateTime para o range de createdAt
+        LocalDateTime createdFromDt = createdFrom != null ? createdFrom.atStartOfDay() : null;
+        // createdTo é exclusivo: início do dia seguinte
+        LocalDateTime createdToDt = createdTo != null ? createdTo.plusDays(1).atStartOfDay() : null;
+
+        Page<Contract> contracts = contractRepository.findByFilters(
+                companyId, customerId, customerName, status, servicePlanId,
+                amountMin, amountMax, createdFromDt, createdToDt,
+                billingDayFrom, billingDayTo, pageable);
+
         return contracts.map(ContractDTO::fromEntity);
     }
 
