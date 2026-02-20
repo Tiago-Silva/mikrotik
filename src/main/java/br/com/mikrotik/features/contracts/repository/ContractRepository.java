@@ -8,7 +8,9 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -63,13 +65,27 @@ public interface ContractRepository extends JpaRepository<Contract, Long> {
                                            Pageable pageable);
 
     // Buscar com filtros múltiplos
-    @Query("SELECT c FROM Contract c WHERE c.companyId = :companyId " +
+    @Query("SELECT c FROM Contract c JOIN c.customer cu WHERE c.companyId = :companyId " +
            "AND (:customerId IS NULL OR c.customerId = :customerId) " +
+           "AND (:customerName IS NULL OR LOWER(cu.name) LIKE LOWER(CONCAT('%', :customerName, '%'))) " +
            "AND (:status IS NULL OR c.status = :status) " +
-           "AND (:servicePlanId IS NULL OR c.servicePlanId = :servicePlanId)")
+           "AND (:servicePlanId IS NULL OR c.servicePlanId = :servicePlanId) " +
+           "AND (:amountMin IS NULL OR c.amount >= :amountMin) " +
+           "AND (:amountMax IS NULL OR c.amount <= :amountMax) " +
+           "AND (:createdFrom IS NULL OR c.createdAt >= :createdFrom) " +
+           "AND (:createdTo IS NULL OR c.createdAt < :createdTo) " +
+           "AND (:billingDayFrom IS NULL OR c.billingDay >= :billingDayFrom) " +
+           "AND (:billingDayTo IS NULL OR c.billingDay <= :billingDayTo)")
     Page<Contract> findByFilters(@Param("companyId") Long companyId,
                                  @Param("customerId") Long customerId,
+                                 @Param("customerName") String customerName,
                                  @Param("status") Contract.ContractStatus status,
                                  @Param("servicePlanId") Long servicePlanId,
+                                 @Param("amountMin") BigDecimal amountMin,
+                                 @Param("amountMax") BigDecimal amountMax,
+                                 @Param("createdFrom") LocalDateTime createdFrom,
+                                 @Param("createdTo") LocalDateTime createdTo,
+                                 @Param("billingDayFrom") Integer billingDayFrom,
+                                 @Param("billingDayTo") Integer billingDayTo,
                                  Pageable pageable);
 }
