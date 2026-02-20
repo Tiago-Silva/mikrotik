@@ -12,7 +12,8 @@ public enum SystemModule {
     // Módulos principais
     AUTH("Autenticação", "Gerenciamento de usuários e autenticação", "auth"),
     CUSTOMERS("Clientes", "Cadastro e gestão de clientes", "customers"),
-    CONTRACTS("Contratos", "Contratos e planos de serviço", "contracts"),
+    CONTRACTS("Contratos", "Contratos de clientes", "contracts"),
+    SERVICE_PLANS("Planos de Serviço", "Gerenciamento de planos comerciais", "service-plans"),
     INVOICES("Faturas", "Faturamento e cobranças", "invoices"),
     FINANCIAL("Financeiro", "Fluxo de caixa e transações", "financial"),
     NETWORK("Rede", "Infraestrutura Mikrotik e PPPoE", "network"),
@@ -42,7 +43,7 @@ public enum SystemModule {
      * Verifica se o módulo é crítico para operação do sistema
      */
     public boolean isCritical() {
-        return this == AUTH || this == CUSTOMERS || this == CONTRACTS;
+        return this == AUTH || this == CUSTOMERS || this == CONTRACTS || this == SERVICE_PLANS;
     }
 
     /**
@@ -52,16 +53,16 @@ public enum SystemModule {
         return switch (role) {
             case ADMIN -> values(); // Todos os módulos
             case OPERATOR -> new SystemModule[]{
-                CUSTOMERS, CONTRACTS, INVOICES, NETWORK, DASHBOARD, AUTOMATION
+                CUSTOMERS, CONTRACTS, SERVICE_PLANS, INVOICES, NETWORK, DASHBOARD, AUTOMATION
             };
             case FINANCIAL -> new SystemModule[]{
-                CUSTOMERS, CONTRACTS, INVOICES, FINANCIAL, DASHBOARD
+                CUSTOMERS, CONTRACTS, SERVICE_PLANS, INVOICES, FINANCIAL, DASHBOARD
             };
             case TECHNICAL -> new SystemModule[]{
-                CUSTOMERS, CONTRACTS, NETWORK, DASHBOARD
+                CUSTOMERS, CONTRACTS, SERVICE_PLANS, NETWORK, DASHBOARD
             };
             case VIEWER -> new SystemModule[]{
-                CUSTOMERS, CONTRACTS, INVOICES, DASHBOARD
+                CUSTOMERS, CONTRACTS, SERVICE_PLANS, INVOICES, DASHBOARD
             };
         };
     }
