@@ -30,7 +30,7 @@ public class ServicePlanController {
     private final ServicePlanService servicePlanService;
 
     @PostMapping
-    @RequireModuleAccess(module = SystemModule.CONTRACTS, action = ModuleAction.CREATE)
+    @RequireModuleAccess(module = SystemModule.SERVICE_PLANS, action = ModuleAction.CREATE)
     @Operation(summary = "Criar novo plano", description = "Cria um novo plano de serviço comercial")
     public ResponseEntity<ServicePlanDTO> create(@Valid @RequestBody ServicePlanDTO dto) {
         log.info("POST /api/service-plans - Criando novo plano: {}", dto.getName());
@@ -39,7 +39,7 @@ public class ServicePlanController {
     }
 
     @GetMapping("/{id}")
-    @RequireModuleAccess(module = SystemModule.CONTRACTS, action = ModuleAction.VIEW)
+    @RequireModuleAccess(module = SystemModule.SERVICE_PLANS, action = ModuleAction.VIEW)
     @Operation(summary = "Buscar plano por ID", description = "Retorna detalhes de um plano específico")
     public ResponseEntity<ServicePlanDTO> findById(@PathVariable Long id) {
         log.info("GET /api/service-plans/{} - Buscando plano", id);
@@ -48,7 +48,7 @@ public class ServicePlanController {
     }
 
     @GetMapping
-    @RequireModuleAccess(module = SystemModule.CONTRACTS, action = ModuleAction.VIEW)
+    @RequireModuleAccess(module = SystemModule.SERVICE_PLANS, action = ModuleAction.VIEW)
     @Operation(summary = "Listar todos os planos", description = "Lista planos da empresa (paginado)")
     public ResponseEntity<Page<ServicePlanDTO>> findAll(
             @PageableDefault(size = 20, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
@@ -58,7 +58,7 @@ public class ServicePlanController {
     }
 
     @GetMapping("/active")
-    @RequireModuleAccess(module = SystemModule.CONTRACTS, action = ModuleAction.VIEW)
+    @RequireModuleAccess(module = SystemModule.SERVICE_PLANS, action = ModuleAction.VIEW)
     @Operation(summary = "Listar planos ativos", description = "Lista planos ativos da empresa (paginado)")
     public ResponseEntity<Page<ServicePlanDTO>> findByActive(
             @RequestParam(defaultValue = "true") Boolean active,
@@ -69,7 +69,7 @@ public class ServicePlanController {
     }
 
     @GetMapping("/all")
-    @RequireModuleAccess(module = SystemModule.CONTRACTS, action = ModuleAction.VIEW)
+    @RequireModuleAccess(module = SystemModule.SERVICE_PLANS, action = ModuleAction.VIEW)
     @Operation(summary = "Listar todos", description = "Lista todos os planos da empresa (paginado)")
     public ResponseEntity<Page<ServicePlanDTO>> findAllByCompany(
             @PageableDefault(size = 50, sort = "name") Pageable pageable) {
@@ -79,7 +79,7 @@ public class ServicePlanController {
     }
 
     @GetMapping("/active-list")
-    @RequireModuleAccess(module = SystemModule.CONTRACTS, action = ModuleAction.VIEW)
+    @RequireModuleAccess(module = SystemModule.SERVICE_PLANS, action = ModuleAction.VIEW)
     @Operation(summary = "Listar ativos", description = "Lista planos ativos da empresa (paginado)")
     public ResponseEntity<Page<ServicePlanDTO>> findActiveByCompany(
             @PageableDefault(size = 50, sort = "name") Pageable pageable) {
@@ -89,7 +89,7 @@ public class ServicePlanController {
     }
 
     @GetMapping("/filter")
-    @RequireModuleAccess(module = SystemModule.CONTRACTS, action = ModuleAction.VIEW)
+    @RequireModuleAccess(module = SystemModule.SERVICE_PLANS, action = ModuleAction.VIEW)
     @Operation(summary = "Buscar com filtros", description = "Busca planos com múltiplos filtros opcionais")
     public ResponseEntity<Page<ServicePlanDTO>> findByFilters(
             @RequestParam(required = false) String name,
@@ -101,7 +101,7 @@ public class ServicePlanController {
     }
 
     @PutMapping("/{id}")
-    @RequireModuleAccess(module = SystemModule.CONTRACTS, action = ModuleAction.EDIT)
+    @RequireModuleAccess(module = SystemModule.SERVICE_PLANS, action = ModuleAction.EDIT)
     @Operation(summary = "Atualizar plano", description = "Atualiza os dados de um plano de serviço")
     public ResponseEntity<ServicePlanDTO> update(
             @PathVariable Long id,
@@ -112,7 +112,7 @@ public class ServicePlanController {
     }
 
     @PatchMapping("/{id}/active")
-    @RequireModuleAccess(module = SystemModule.CONTRACTS, action = ModuleAction.EDIT)
+    @RequireModuleAccess(module = SystemModule.SERVICE_PLANS, action = ModuleAction.EDIT)
     @Operation(summary = "Ativar/Desativar plano", description = "Altera o status ativo do plano")
     public ResponseEntity<ServicePlanDTO> toggleActive(
             @PathVariable Long id,
@@ -123,7 +123,7 @@ public class ServicePlanController {
     }
 
     @DeleteMapping("/{id}")
-    @RequireModuleAccess(module = SystemModule.CONTRACTS, action = ModuleAction.DELETE)
+    @RequireModuleAccess(module = SystemModule.SERVICE_PLANS, action = ModuleAction.DELETE)
     @Operation(summary = "Deletar plano", description = "Remove um plano de serviço do sistema")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         log.info("DELETE /api/service-plans/{} - Deletando plano", id);
@@ -132,7 +132,7 @@ public class ServicePlanController {
     }
 
     @GetMapping("/count")
-    @RequireModuleAccess(module = SystemModule.CONTRACTS, action = ModuleAction.VIEW)
+    @RequireModuleAccess(module = SystemModule.SERVICE_PLANS, action = ModuleAction.VIEW)
     @Operation(summary = "Contar planos", description = "Retorna o número total de planos da empresa")
     public ResponseEntity<Long> countByCompany() {
         log.info("GET /api/service-plans/count");
@@ -141,7 +141,7 @@ public class ServicePlanController {
     }
 
     @GetMapping("/count-active")
-    @RequireModuleAccess(module = SystemModule.CONTRACTS, action = ModuleAction.VIEW)
+    @RequireModuleAccess(module = SystemModule.SERVICE_PLANS, action = ModuleAction.VIEW)
     @Operation(summary = "Contar planos ativos", description = "Retorna o número de planos ativos da empresa")
     public ResponseEntity<Long> countActiveByCompany() {
         log.info("GET /api/service-plans/count-active");
