@@ -16,9 +16,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/api/contracts")
@@ -82,14 +86,31 @@ public class ContractController {
 
     @GetMapping("/filter")
     @RequireModuleAccess(module = SystemModule.CONTRACTS, action = ModuleAction.VIEW)
-    @Operation(summary = "Buscar com filtros", description = "Busca contratos com múltiplos filtros opcionais")
+    @Operation(
+        summary = "Buscar com filtros",
+        description = "Busca contratos com múltiplos filtros opcionais: " +
+                      "nome do cliente (parcial), valor (min/max), plano de serviço, " +
+                      "período de criação e período de vencimento (billingDay)")
     public ResponseEntity<Page<ContractDTO>> findByFilters(
             @RequestParam(required = false) Long customerId,
+            @RequestParam(required = false) String customerName,
             @RequestParam(required = false) Contract.ContractStatus status,
             @RequestParam(required = false) Long servicePlanId,
+            @RequestParam(required = false) BigDecimal amountMin,
+            @RequestParam(required = false) BigDecimal amountMax,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate createdFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate createdTo,
+            @RequestParam(required = false) Integer billingDayFrom,
+            @RequestParam(required = false) Integer billingDayTo,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        log.info("GET /api/contracts/filter - Buscando com filtros");
-        Page<ContractDTO> contracts = contractService.findByFilters(customerId, status, servicePlanId, pageable);
+        log.info("GET /api/contracts/filter - customerName={}, status={}, servicePlanId={}, " +
+                 "amount=[{}-{}], createdAt=[{}-{}], billingDay=[{}-{}]",
+                 customerName, status, servicePlanId, amountMin, amountMax,
+                 createdFrom, createdTo, billingDayFrom, billingDayTo);
+        Page<ContractDTO> contracts = contractService.findByFilters(
+                customerId, customerName, status, servicePlanId,
+                amountMin, amountMax, createdFrom, createdTo,
+                billingDayFrom, billingDayTo, pageable);
         return ResponseEntity.ok(contracts);
     }
 
