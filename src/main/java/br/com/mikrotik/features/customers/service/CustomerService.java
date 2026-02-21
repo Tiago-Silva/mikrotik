@@ -16,6 +16,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -170,11 +172,18 @@ public class CustomerService {
      */
     @Transactional(readOnly = true)
     public Page<CustomerDTO> findByFilters(String name, Customer.CustomerStatus status,
-                                           Customer.CustomerType type, Pageable pageable) {
-        log.info("Buscando clientes com filtros - nome: {}, status: {}, tipo: {}", name, status, type);
+                                           Customer.CustomerType type,
+                                           LocalDate createdFrom, LocalDate createdTo,
+                                           Pageable pageable) {
+        log.info("Buscando clientes com filtros - nome: {}, status: {}, tipo: {}, de: {}, até: {}",
+                name, status, type, createdFrom, createdTo);
 
         Long companyId = CompanyContextHolder.getCompanyId();
-        Page<Customer> customers = customerRepository.findByFilters(companyId, name, status, type, pageable);
+
+        LocalDateTime from = createdFrom != null ? createdFrom.atStartOfDay() : null;
+        LocalDateTime to   = createdTo   != null ? createdTo.atTime(23, 59, 59) : null;
+
+        Page<Customer> customers = customerRepository.findByFilters(companyId, name, status, type, from, to, pageable);
 
         return customers.map(CustomerDTO::fromEntity);
     }
