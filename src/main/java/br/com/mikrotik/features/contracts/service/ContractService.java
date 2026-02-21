@@ -217,6 +217,13 @@ public class ContractService {
      *
      * ARQUITETURA: Publica evento para processamento assíncrono de integrações.
      * A transação é commitada ANTES de qualquer chamada ao Mikrotik.
+     *
+     * REGRA DE NEGÓCIO: O status do cliente é sincronizado junto ao contrato:
+     *   ACTIVE              → Customer ACTIVE
+     *   SUSPENDED_FINANCIAL → Customer SUSPENDED
+     *   SUSPENDED_REQUEST   → Customer SUSPENDED
+     *   CANCELED            → Customer CANCELED
+     *   DRAFT / PENDING     → Cliente permanece inalterado
      */
     @Transactional
     public ContractDTO updateStatus(Long id, Contract.ContractStatus status) {
@@ -236,6 +243,10 @@ public class ContractService {
 
         contract = contractRepository.save(contract);
 
+        // ── Sincronizar status do cliente ────────────────────────────────────────
+        syncCustomerStatus(contract.getCustomerId(), status);
+        // ─────────────────────────────────────────────────────────────────────────
+
         // Publicar evento para processamento assíncrono (APÓS commit da transação)
         eventPublisher.publishEvent(new ContractStatusChangedEvent(
                 this,
@@ -249,6 +260,32 @@ public class ContractService {
 
         log.info("Status do contrato alterado com sucesso: ID={}, evento publicado", id);
         return ContractDTO.fromEntity(contract);
+    }
+
+    /**
+     * Mapeia status do contrato → status do cliente e persiste a atualização.
+     * DRAFT / PENDING não afetam o cliente (ainda sem plano definitivo).
+     */
+    private void syncCustomerStatus(Long customerId, Contract.ContractStatus contractStatus) {
+        Customer.CustomerStatus targetStatus = switch (contractStatus) {
+            case ACTIVE                            -> Customer.CustomerStatus.ACTIVE;
+            case SUSPENDED_FINANCIAL,
+                 SUSPENDED_REQUEST                 -> Customer.CustomerStatus.SUSPENDED;
+            case CANCELED                          -> Customer.CustomerStatus.CANCELED;
+            default                                -> null; // DRAFT / PENDING: não altera
+        };
+
+        if (targetStatus == null) {
+            log.debug("Status de contrato {} não requer alteração no cliente", contractStatus);
+            return;
+        }
+
+        customerRepository.findById(customerId).ifPresentOrElse(customer -> {
+            Customer.CustomerStatus previous = customer.getStatus();
+            customer.setStatus(targetStatus);
+            customerRepository.save(customer);
+            log.info("Status do cliente ID={} sincronizado: {} → {}", customerId, previous, targetStatus);
+        }, () -> log.warn("Cliente ID={} não encontrado ao sincronizar status", customerId));
     }
 
     /**
