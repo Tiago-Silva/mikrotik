@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -60,10 +61,14 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
     @Query("SELECT c FROM Customer c WHERE c.companyId = :companyId " +
            "AND (:name IS NULL OR LOWER(c.name) LIKE LOWER(CONCAT('%', :name, '%'))) " +
            "AND (:status IS NULL OR c.status = :status) " +
-           "AND (:type IS NULL OR c.type = :type)")
+           "AND (:type IS NULL OR c.type = :type) " +
+           "AND (:createdFrom IS NULL OR c.createdAt >= :createdFrom) " +
+           "AND (:createdTo IS NULL OR c.createdAt <= :createdTo)")
     Page<Customer> findByFilters(@Param("companyId") Long companyId,
                                   @Param("name") String name,
                                   @Param("status") Customer.CustomerStatus status,
                                   @Param("type") Customer.CustomerType type,
+                                  @Param("createdFrom") LocalDateTime createdFrom,
+                                  @Param("createdTo") LocalDateTime createdTo,
                                   Pageable pageable);
 }
