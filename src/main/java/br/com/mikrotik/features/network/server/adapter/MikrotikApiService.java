@@ -379,6 +379,38 @@ public class MikrotikApiService {
         }
     }
 
+    /**
+     * Busca a sessão PPPoE ativa de um usuário específico diretamente no Mikrotik.
+     *
+     * Estratégia: lista todas as sessões e filtra no Java (mesma abordagem do
+     * findIdByNameListAll) para evitar incompatibilidades de sintaxe entre versões
+     * da RouterOS API.
+     *
+     * @return Map com os campos da sessão (address, uptime, service, etc.)
+     *         ou null se o usuário não estiver conectado.
+     */
+    public Map<String, String> getActivePppoeSessionByUsername(
+            String host, Integer apiPort, String username, String password, String pppoeUsername) {
+
+        ApiConnection connection = null;
+        try {
+            connection = connect(host, username, password);
+            List<Map<String, String>> results = connection.execute("/ppp/active/print");
+            if (results == null || results.isEmpty()) {
+                return null;
+            }
+            return results.stream()
+                    .filter(r -> pppoeUsername.equalsIgnoreCase(r.get("name")))
+                    .findFirst()
+                    .orElse(null);
+        } catch (Exception e) {
+            log.warn("Erro ao buscar sessão ativa para username={}: {}", pppoeUsername, e.getMessage());
+            return null;
+        } finally {
+            closeConnection(connection);
+        }
+    }
+
     // ==================================================================================
     // MÉTODOS AUXILIARES PRIVADOS
     // ==================================================================================
@@ -472,3 +504,4 @@ public class MikrotikApiService {
         throw new MikrotikConnectionException(msg + ": " + e.getMessage());
     }
 }
+
