@@ -18,9 +18,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/api/customers")
@@ -121,9 +124,12 @@ public class CustomerController {
             @RequestParam(required = false) String name,
             @RequestParam(required = false) Customer.CustomerStatus status,
             @RequestParam(required = false) Customer.CustomerType type,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate createdFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate createdTo,
             @PageableDefault(size = 20, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
-        log.info("GET /api/customers/filter - Buscando com filtros");
-        Page<CustomerDTO> customers = customerService.findByFilters(name, status, type, pageable);
+        log.info("GET /api/customers/filter - Buscando com filtros - nome: {}, status: {}, tipo: {}, de: {}, até: {}",
+                name, status, type, createdFrom, createdTo);
+        Page<CustomerDTO> customers = customerService.findByFilters(name, status, type, createdFrom, createdTo, pageable);
         return ResponseEntity.ok(customers);
     }
 
