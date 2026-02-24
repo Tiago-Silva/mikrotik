@@ -189,22 +189,43 @@ public class ContractService {
         Contract existing = contractRepository.findByIdAndCompanyId(id, companyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Contrato não encontrado com ID: " + id));
 
-        // Validar usuário PPPoE se foi alterado
-        if (dto.getPppoeUserId() != null &&
-            !dto.getPppoeUserId().equals(existing.getPppoeUserId())) {
+        // ── Plano de serviço: só atualiza se fornecido e diferente do atual ───────
+        if (dto.getServicePlanId() != null && !dto.getServicePlanId().equals(existing.getServicePlanId())) {
+            if (!servicePlanRepository.findByIdAndCompanyId(dto.getServicePlanId(), companyId).isPresent()) {
+                throw new ValidationException("Plano de serviço não encontrado ou não pertence à empresa");
+            }
+            existing.setServicePlanId(dto.getServicePlanId());
+        }
+
+        // ── PPPoE User: PROTEÇÃO contra null-overwrite ────────────────────────────
+        // Se o DTO não enviar pppoeUserId (null), o vínculo existente é preservado.
+        // Só altera se vier um valor explícito E diferente do atual.
+        if (dto.getPppoeUserId() != null && !dto.getPppoeUserId().equals(existing.getPppoeUserId())) {
             if (!pppoeUserRepository.findById(dto.getPppoeUserId()).isPresent()) {
                 throw new ValidationException("Usuário PPPoE não encontrado");
             }
             if (contractRepository.findByPppoeUserId(dto.getPppoeUserId()).isPresent()) {
                 throw new ValidationException("Usuário PPPoE já está vinculado a outro contrato");
             }
+            existing.setPppoeUserId(dto.getPppoeUserId());
+        }
+        // ── Endereço de instalação: mesma proteção ────────────────────────────────
+        if (dto.getInstallationAddressId() != null &&
+            !dto.getInstallationAddressId().equals(existing.getInstallationAddressId())) {
+            if (!addressRepository.existsById(dto.getInstallationAddressId())) {
+                throw new ValidationException("Endereço de instalação não encontrado");
+            }
+            existing.setInstallationAddressId(dto.getInstallationAddressId());
         }
 
-        existing.setPppoeUserId(dto.getPppoeUserId());
-        existing.setInstallationAddressId(dto.getInstallationAddressId());
+        // ── Campos obrigatórios (@NotNull no DTO) — sempre atualizados ────────────
         existing.setBillingDay(dto.getBillingDay());
         existing.setAmount(dto.getAmount());
-        existing.setEndDate(dto.getEndDate());
+
+        // ── endDate: nullable por design; só atualiza se o DTO trouxer valor ──────
+        if (dto.getEndDate() != null) {
+            existing.setEndDate(dto.getEndDate());
+        }
 
         existing = contractRepository.save(existing);
 
@@ -344,7 +365,7 @@ public class ContractService {
         log.info("=== SUSPENDENDO CONTRATO POR INADIMPLÊNCIA - ID: {} ===", id);
 
         ContractDTO contract = updateStatus(id, Contract.ContractStatus.SUSPENDED_FINANCIAL);
-        log.info("Status alterado para: SUSPENDED_FINANCIAL (bloqueio será processado assíncronamente)");
+        log.info("Status alterado para: SUSPENDED_FINANCIAL (bloqueio será processado assíncrono)");
 
         log.info("=== SUSPENSÃO CONCLUÍDA ===");
         return contract;
@@ -561,8 +582,8 @@ public class ContractService {
                 .replaceAll("\\s+", "");
 
         // Limitar tamanho
-        if (baseName.length() > 10) {
-            baseName = baseName.substring(0, 10);
+        if (baseName.length() > 32) {
+            baseName = baseName.substring(0, 32);
         }
 
         // Se ficou vazio, usar "cliente"
