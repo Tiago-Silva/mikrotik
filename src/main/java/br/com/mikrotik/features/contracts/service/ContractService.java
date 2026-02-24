@@ -1,6 +1,7 @@
 package br.com.mikrotik.features.contracts.service;
 
 import br.com.mikrotik.features.contracts.dto.ContractDTO;
+import br.com.mikrotik.features.contracts.event.ContractPlanChangedEvent;
 import br.com.mikrotik.features.contracts.event.ContractStatusChangedEvent;
 import br.com.mikrotik.shared.infrastructure.exception.ResourceNotFoundException;
 import br.com.mikrotik.shared.infrastructure.exception.ValidationException;
@@ -189,12 +190,18 @@ public class ContractService {
         Contract existing = contractRepository.findByIdAndCompanyId(id, companyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Contrato não encontrado com ID: " + id));
 
-        // ── Plano de serviço: só atualiza se fornecido e diferente do atual ───────
+        // ── Plano de serviço: captura anterior e detecta mudança ─────────────────
+        final Long previousServicePlanId = existing.getServicePlanId();
+        boolean planChanged = false;
+
         if (dto.getServicePlanId() != null && !dto.getServicePlanId().equals(existing.getServicePlanId())) {
             if (!servicePlanRepository.findByIdAndCompanyId(dto.getServicePlanId(), companyId).isPresent()) {
                 throw new ValidationException("Plano de serviço não encontrado ou não pertence à empresa");
             }
             existing.setServicePlanId(dto.getServicePlanId());
+            planChanged = true;
+            log.info("Mudança de plano detectada no contrato {}: {} → {}",
+                     id, previousServicePlanId, dto.getServicePlanId());
         }
 
         // ── PPPoE User: PROTEÇÃO contra null-overwrite ────────────────────────────
@@ -228,6 +235,28 @@ public class ContractService {
         }
 
         existing = contractRepository.save(existing);
+
+        // ── Propagar mudança de plano ao Mikrotik de forma assíncrona ─────────────
+        // REGRA DE OURO: evento publicado APÓS o save/commit — nunca dentro da tx.
+        // Se o contrato ainda não tem PPPoE vinculado, a propagação é ignorada
+        // (o profile correto será aplicado no momento da ativação).
+        if (planChanged) {
+            if (existing.getPppoeUserId() != null) {
+                eventPublisher.publishEvent(new ContractPlanChangedEvent(
+                        this,
+                        existing.getId(),
+                        companyId,
+                        existing.getPppoeUserId(),
+                        previousServicePlanId,
+                        existing.getServicePlanId()
+                ));
+                log.info("Evento ContractPlanChangedEvent publicado: contrato={}, plano: {}→{}",
+                         existing.getId(), previousServicePlanId, existing.getServicePlanId());
+            } else {
+                log.info("Contrato {} sem PPPoE vinculado — propagação ao Mikrotik será feita na ativação",
+                         existing.getId());
+            }
+        }
 
         log.info("Contrato atualizado com sucesso: ID={}", id);
         return ContractDTO.fromEntity(existing);
