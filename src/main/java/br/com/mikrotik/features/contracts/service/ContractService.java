@@ -636,7 +636,7 @@ public class ContractService {
      */
     private String generateSecurePassword() {
         // Caracteres sem ambiguidade (sem I, l, 1, O, 0)
-        String chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#$";
+        String chars = "ABCDabcd2345@#$%";
         SecureRandom random = new SecureRandom();
         StringBuilder password = new StringBuilder();
 
