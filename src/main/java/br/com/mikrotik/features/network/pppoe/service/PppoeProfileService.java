@@ -15,6 +15,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -34,8 +36,25 @@ public class PppoeProfileService {
         MikrotikServer server = serverRepository.findById(dto.getMikrotikServerId())
                 .orElseThrow(() -> new ResourceNotFoundException("Servidor Mikrotik não encontrado"));
 
-        // 1. CRIAR NO MIKROTIK VIA API PRIMEIRO
-        log.info("Criando perfil PPPoE no Mikrotik via API e no banco de dados");
+        // 1. SALVAR NO BANCO PRIMEIRO (flush imediato para expor erros de constraint)
+        // Se o banco falhar (ex.: nome duplicado), o Mikrotik nunca é chamado — sem órfãos.
+        log.info("Salvando perfil PPPoE no banco antes de enviar ao Mikrotik");
+        PppoeProfile profile = new PppoeProfile();
+        profile.setName(dto.getName());
+        profile.setDescription(dto.getDescription());
+        profile.setMaxBitrateDl(dto.getMaxBitrateDl());
+        profile.setMaxBitrateUl(dto.getMaxBitrateUl());
+        profile.setSessionTimeout(dto.getSessionTimeout());
+        profile.setActive(dto.getActive() != null ? dto.getActive() : true);
+        profile.setMikrotikServer(server);
+        profile.setCreatedAt(LocalDateTime.now());
+        profile.setUpdatedAt(LocalDateTime.now());
+
+        PppoeProfile saved = repository.saveAndFlush(profile);
+
+        // 2. CRIAR NO MIKROTIK VIA API
+        // Se o Mikrotik falhar, @Transactional reverte o banco automaticamente.
+        log.info("Criando perfil PPPoE no Mikrotik via API: {}", saved.getId());
         apiService.createPppoeProfile(
                 server.getIpAddress(),
                 server.getApiPort(),
@@ -48,20 +67,7 @@ public class PppoeProfileService {
                 dto.getDescription()
         );
 
-        // 2. SALVAR NO BANCO
-        PppoeProfile profile = new PppoeProfile();
-        profile.setName(dto.getName());
-        profile.setDescription(dto.getDescription());
-        profile.setMaxBitrateDl(dto.getMaxBitrateDl());
-        profile.setMaxBitrateUl(dto.getMaxBitrateUl());
-        profile.setSessionTimeout(dto.getSessionTimeout());
-        profile.setActive(dto.getActive() != null ? dto.getActive() : true);
-        profile.setMikrotikServer(server);
-        profile.setCreatedAt(LocalDateTime.now());
-        profile.setUpdatedAt(LocalDateTime.now());
-
-        PppoeProfile saved = repository.save(profile);
-        log.info("Perfil PPPoE criado com sucesso: {} (Mikrotik + Banco)", saved.getId());
+        log.info("Perfil PPPoE criado com sucesso: {} (Banco + Mikrotik)", saved.getId());
         return mapToDTO(saved);
     }
 
@@ -88,25 +94,12 @@ public class PppoeProfileService {
         PppoeProfile profile = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Perfil PPPoE não encontrado: " + id));
 
-        String oldName = profile.getName();
-        MikrotikServer server = profile.getMikrotikServer();
+        // Capturar nome antigo ANTES de mutar a entidade — será usado na chamada ao Mikrotik
+        final String oldName = profile.getName();
+        final MikrotikServer server = profile.getMikrotikServer();
 
-        // 1. ATUALIZAR NO MIKROTIK VIA API PRIMEIRO
-        log.info("Atualizando perfil PPPoE no Mikrotik via API e no banco de dados");
-        apiService.updatePppoeProfile(
-                server.getIpAddress(),
-                server.getApiPort(),
-                server.getUsername(),
-                server.getPassword(),
-                oldName,  // Nome antigo
-                dto.getName(),  // Nome novo
-                dto.getMaxBitrateDl(),
-                dto.getMaxBitrateUl(),
-                dto.getSessionTimeout(),
-                dto.getDescription()
-        );
-
-        // 2. ATUALIZAR NO BANCO
+        // 1. PERSISTIR NO BANCO PRIMEIRO (flush para expor erros de constraint antes de chamar o Mikrotik)
+        // Se o save falhar, o Mikrotik não é tocado — sem divergência de nomes.
         profile.setName(dto.getName());
         profile.setDescription(dto.getDescription());
         profile.setMaxBitrateDl(dto.getMaxBitrateDl());
@@ -115,8 +108,42 @@ public class PppoeProfileService {
         profile.setActive(dto.getActive());
         profile.setUpdatedAt(LocalDateTime.now());
 
-        PppoeProfile updated = repository.save(profile);
-        log.info("Perfil PPPoE atualizado com sucesso: {} (Mikrotik + Banco)", updated.getId());
+        PppoeProfile updated = repository.saveAndFlush(profile);
+
+        // 2. ATUALIZAR NO MIKROTIK APÓS O COMMIT
+        // REGRA DE OURO: nunca segurar connection pool esperando resposta de hardware.
+        final String newName        = dto.getName();
+        final Long   bitrateDl      = dto.getMaxBitrateDl();
+        final Long   bitrateUl      = dto.getMaxBitrateUl();
+        final Integer sessionTimeout = dto.getSessionTimeout();
+        final String description     = dto.getDescription();
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                log.info("Atualizando perfil PPPoE no Mikrotik após commit: {} → {}", oldName, newName);
+                try {
+                    apiService.updatePppoeProfile(
+                            server.getIpAddress(),
+                            server.getApiPort(),
+                            server.getUsername(),
+                            server.getPassword(),
+                            oldName,
+                            newName,
+                            bitrateDl,
+                            bitrateUl,
+                            sessionTimeout,
+                            description
+                    );
+                    log.info("✅ Perfil PPPoE atualizado no Mikrotik: {}", newName);
+                } catch (Exception e) {
+                    log.error("❌ Falha ao atualizar perfil PPPoE no Mikrotik: {} — {}", newName, e.getMessage());
+                    // Banco já atualizado. Operador pode re-sincronizar manualmente.
+                }
+            }
+        });
+
+        log.info("Perfil PPPoE atualizado no banco: {} (Mikrotik será atualizado após commit)", updated.getId());
         return mapToDTO(updated);
     }
 
@@ -126,20 +153,26 @@ public class PppoeProfileService {
                 .orElseThrow(() -> new ResourceNotFoundException("Perfil PPPoE não encontrado: " + id));
 
         MikrotikServer server = profile.getMikrotikServer();
+        String profileName = profile.getName();
 
-        // 1. DELETAR DO MIKROTIK VIA API PRIMEIRO
-        log.info("Deletando perfil PPPoE do Mikrotik via API e do banco de dados");
+        // 1. DELETAR DO BANCO PRIMEIRO (flush para expor FK constraints)
+        // Se houver usuários PPPoE vinculados, o banco rejeita e o Mikrotik não é tocado.
+        log.info("Deletando perfil PPPoE do banco: {}", profileName);
+        repository.delete(profile);
+        repository.flush();
+
+        // 2. DELETAR DO MIKROTIK VIA API
+        // Se o Mikrotik falhar, @Transactional reverte a deleção do banco automaticamente.
+        log.info("Deletando perfil PPPoE do Mikrotik via API: {}", profileName);
         apiService.deletePppoeProfile(
                 server.getIpAddress(),
                 server.getApiPort(),
                 server.getUsername(),
                 server.getPassword(),
-                profile.getName()
+                profileName
         );
 
-        // 2. DELETAR DO BANCO
-        repository.delete(profile);
-        log.info("Perfil PPPoE deletado com sucesso: {} (Mikrotik + Banco)", id);
+        log.info("Perfil PPPoE deletado com sucesso: {} (Banco + Mikrotik)", id);
     }
 
     @Transactional
