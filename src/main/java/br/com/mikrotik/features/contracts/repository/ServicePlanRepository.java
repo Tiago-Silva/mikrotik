@@ -47,6 +47,17 @@ public interface ServicePlanRepository extends JpaRepository<ServicePlan, Long> 
     // Contar planos ativos por empresa
     long countByCompanyIdAndActive(Long companyId, Boolean active);
 
+    /**
+     * Busca ServicePlan pelo ID com pppoeProfile carregado via JOIN FETCH.
+     *
+     * USO OBRIGATÓRIO em threads @Async (NetworkIntegrationService):
+     * ServicePlan.pppoeProfile é FetchType.LAZY — acessar getPppoeProfile()
+     * fora de uma sessão Hibernate aberta lança LazyInitializationException.
+     * Este query resolve o problema em uma única query SQL sem sessão aberta.
+     */
+    @Query("SELECT sp FROM ServicePlan sp JOIN FETCH sp.pppoeProfile WHERE sp.id = :id")
+    Optional<ServicePlan> findByIdWithProfile(@Param("id") Long id);
+
     // Buscar com filtros múltiplos
     @Query("SELECT sp FROM ServicePlan sp WHERE sp.companyId = :companyId " +
            "AND (:name IS NULL OR LOWER(sp.name) LIKE LOWER(CONCAT('%', :name, '%'))) " +
