@@ -11,7 +11,7 @@ import br.com.mikrotik.features.contracts.repository.ContractRepository;
 import br.com.mikrotik.features.network.pppoe.repository.PppoeProfileRepository;
 import br.com.mikrotik.features.network.pppoe.repository.PppoeUserRepository;
 import br.com.mikrotik.features.contracts.repository.ServicePlanRepository;
-import br.com.mikrotik.features.network.server.adapter.MikrotikSshService;
+import br.com.mikrotik.features.network.server.adapter.MikrotikApiService;
 import br.com.mikrotik.shared.util.CompanyContextHolder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +19,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -33,7 +35,7 @@ public class ServicePlanService {
     private final PppoeProfileRepository pppoeProfileRepository;
     private final ContractRepository contractRepository;
     private final PppoeUserRepository pppoeUserRepository;
-    private final MikrotikSshService mikrotikSshService;
+    private final MikrotikApiService mikrotikApiService;
 
     /**
      * Criar novo plano de serviço
@@ -159,7 +161,6 @@ public class ServicePlanService {
 
         // Detectar mudança no perfil PPPoE
         boolean profileChanged = !existing.getPppoeProfileId().equals(dto.getPppoeProfileId());
-        Long oldProfileId = existing.getPppoeProfileId();
         Long newProfileId = dto.getPppoeProfileId();
 
         // Validar perfil PPPoE se foi alterado
@@ -175,27 +176,29 @@ public class ServicePlanService {
         existing.setPppoeProfileId(dto.getPppoeProfileId());
         existing.setActive(dto.getActive());
 
-        existing = servicePlanRepository.save(existing);
+        final ServicePlan saved = servicePlanRepository.save(existing);
 
         log.info("Plano de serviço atualizado com sucesso: ID={}", id);
 
-        // Sincronizar perfil com Mikrotik se foi alterado
+        // REGRA DE OURO: registrar a sincronização para APÓS o commit da transação.
+        // Sem isso, cada chamada ao Mikrotik segura a connection pool durante toda a iteração.
+        // Com N contratos ativos, isso é N round-trips de rede dentro de 1 transação aberta.
         if (profileChanged) {
-            log.info("==========================================================");
-            log.info("PERFIL PPPoE ALTERADO - Sincronizando com Mikrotik");
-            log.info("Plano: {} (ID: {})", existing.getName(), id);
-            log.info("Perfil antigo ID: {}", oldProfileId);
-            log.info("Perfil novo ID: {}", newProfileId);
-            log.info("==========================================================");
-
-            syncPppoeProfileToMikrotik(id, newProfileId);
+            log.info("Perfil PPPoE alterado no plano {} — sincronização com Mikrotik agendada para após commit", id);
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    syncPppoeProfileToMikrotik(saved.getId(), newProfileId);
+                }
+            });
         }
 
-        return ServicePlanDTO.fromEntity(existing);
+        return ServicePlanDTO.fromEntity(saved);
     }
 
     /**
-     * Sincronizar perfil PPPoE com Mikrotik para todos os contratos ativos do plano
+     * Sincronizar perfil PPPoE com Mikrotik para todos os contratos ativos do plano.
+     * Executado APÓS o commit da transação principal via afterCommit().
      */
     private void syncPppoeProfileToMikrotik(Long servicePlanId, Long newProfileId) {
         try {
@@ -208,11 +211,11 @@ public class ServicePlanService {
                     servicePlanId, Contract.ContractStatus.ACTIVE);
 
             if (activeContracts.isEmpty()) {
-                log.info("Nenhum contrato ativo encontrado para este plano. Sincronização não necessária.");
+                log.info("Nenhum contrato ativo encontrado para o plano {}. Sincronização não necessária.", servicePlanId);
                 return;
             }
 
-            log.info("Encontrados {} contrato(s) ativo(s) para sincronizar", activeContracts.size());
+            log.info("Sincronizando perfil PPPoE para {} contrato(s) ativo(s) do plano {}", activeContracts.size(), servicePlanId);
 
             int successCount = 0;
             int failureCount = 0;
@@ -224,25 +227,24 @@ public class ServicePlanService {
                 }
 
                 try {
-                    // Buscar usuário PPPoE
                     PppoeUser pppoeUser = pppoeUserRepository.findById(contract.getPppoeUserId())
                             .orElseThrow(() -> new ResourceNotFoundException(
                                     "Usuário PPPoE não encontrado: " + contract.getPppoeUserId()));
 
-                    log.info(">>> Sincronizando contrato ID {} - PPPoE User: {}",
-                            contract.getId(), pppoeUser.getUsername());
+                    log.info(">>> Sincronizando contrato ID {} - PPPoE User: {}", contract.getId(), pppoeUser.getUsername());
 
-                    // Alterar perfil no Mikrotik
-                    mikrotikSshService.changePppoeUserProfile(
+                    // Alterar perfil no Mikrotik via API
+                    mikrotikApiService.changePppoeUserProfile(
                             pppoeUser.getMikrotikServer().getIpAddress(),
-                            pppoeUser.getMikrotikServer().getPort(),
+                            pppoeUser.getMikrotikServer().getApiPort(),
                             pppoeUser.getMikrotikServer().getUsername(),
                             pppoeUser.getMikrotikServer().getPassword(),
                             pppoeUser.getUsername(),
                             newProfile.getName()
                     );
 
-                    // Atualizar status no banco - não precisa mais salvar pppoeProfileId
+                    // Atualizar perfil do pppoe_user no banco para manter consistência
+                    pppoeUser.setProfile(newProfile);
                     pppoeUser.setUpdatedAt(LocalDateTime.now());
                     pppoeUserRepository.save(pppoeUser);
 
@@ -257,15 +259,13 @@ public class ServicePlanService {
             }
 
             log.info("==========================================================");
-            log.info("SINCRONIZAÇÃO CONCLUÍDA");
-            log.info("Total de contratos processados: {}", activeContracts.size());
-            log.info("Sucessos: {}", successCount);
-            log.info("Falhas: {}", failureCount);
+            log.info("SINCRONIZAÇÃO CONCLUÍDA — Plano ID: {}", servicePlanId);
+            log.info("Contratos processados: {} | Sucessos: {} | Falhas: {}",
+                    activeContracts.size(), successCount, failureCount);
             log.info("==========================================================");
 
         } catch (Exception e) {
             log.error("❌ Erro crítico ao sincronizar perfil com Mikrotik: {}", e.getMessage(), e);
-            // Não lança exceção para não reverter a atualização do plano no banco
         }
     }
 
