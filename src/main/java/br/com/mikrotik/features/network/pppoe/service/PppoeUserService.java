@@ -18,6 +18,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -55,18 +57,8 @@ public class PppoeUserService {
             throw new IllegalArgumentException("Username já existe neste servidor");
         }
 
-        // Criar usuário no Mikrotik
-        // 1. CRIAR NO MIKROTIK VIA API
-        apiService.createPppoeUser(
-                server.getIpAddress(),
-                server.getApiPort(),
-                server.getUsername(),
-                server.getPassword(),
-                dto.getUsername(),
-                dto.getPassword(),
-                profile.getName()
-        );
-
+        // 1. SALVAR NO BANCO PRIMEIRO (flush imediato para expor erros de constraint)
+        // Se o banco falhar (ex.: username duplicado, FK inválido), o Mikrotik nunca é chamado — sem órfãos.
         PppoeUser user = new PppoeUser();
         user.setCompanyId(server.getCompanyId());
         user.setUsername(dto.getUsername());
@@ -82,8 +74,22 @@ public class PppoeUserService {
         user.setCreatedAt(LocalDateTime.now());
         user.setUpdatedAt(LocalDateTime.now());
 
-        PppoeUser saved = repository.save(user);
-        log.info("Usuário PPPoE criado: {}", saved.getId());
+        PppoeUser saved = repository.saveAndFlush(user);
+
+        // 2. CRIAR NO MIKROTIK VIA API
+        // Se o Mikrotik falhar, @Transactional reverte o banco automaticamente.
+        log.info("Criando usuário PPPoE no Mikrotik via API: {}", saved.getUsername());
+        apiService.createPppoeUser(
+                server.getIpAddress(),
+                server.getApiPort(),
+                server.getUsername(),
+                server.getPassword(),
+                dto.getUsername(),
+                dto.getPassword(),
+                profile.getName()
+        );
+
+        log.info("Usuário PPPoE criado com sucesso: {} (Banco + Mikrotik)", saved.getId());
         return mapToDTO(saved);
     }
 
@@ -171,16 +177,9 @@ public class PppoeUserService {
 
         MikrotikServer server = user.getMikrotikServer();
 
-        apiService.changePppoeUserAll(
-                server.getIpAddress(),
-                server.getApiPort(),
-                server.getUsername(),
-                server.getPassword(),
-                user,
-                newProfile
-        );
-
-        // 2. ATUALIZAR NO BANCO
+        // 1. APLICAR VALORES DO DTO NA ENTIDADE PRIMEIRO
+        // CRÍTICO: a entidade deve refletir os novos dados ANTES de chamar o Mikrotik,
+        // caso contrário changePppoeUserAll envia o estado antigo (ex.: senha antiga).
         user.setEmail(dto.getEmail());
         user.setComment(dto.getComment());
         user.setMacAddress(dto.getMacAddress());
@@ -190,6 +189,17 @@ public class PppoeUserService {
         user.setPassword(dto.getPassword());
         user.setUpdatedAt(LocalDateTime.now());
 
+        // 2. ATUALIZAR NO MIKROTIK VIA API COM OS DADOS NOVOS
+        apiService.changePppoeUserAll(
+                server.getIpAddress(),
+                server.getApiPort(),
+                server.getUsername(),
+                server.getPassword(),
+                user,
+                newProfile
+        );
+
+        // 3. PERSISTIR NO BANCO
         PppoeUser updated = repository.save(user);
         log.info("Usuário PPPoE atualizado com sucesso: {} (Mikrotik + Banco)", updated.getId());
         return mapToDTO(updated);
@@ -200,17 +210,21 @@ public class PppoeUserService {
         PppoeUser user = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário PPPoE não encontrado: " + id));
 
-        // Deletar usuário do Mikrotik via API
-        apiService.deletePppoeUser(
-                user.getMikrotikServer().getIpAddress(),
-                user.getMikrotikServer().getApiPort(),
-                user.getMikrotikServer().getUsername(),
-                user.getMikrotikServer().getPassword(),
-                user.getUsername()
-        );
+        String username = user.getUsername();
+        String host = user.getMikrotikServer().getIpAddress();
+        Integer apiPort = user.getMikrotikServer().getApiPort();
+        String serverUser = user.getMikrotikServer().getUsername();
+        String serverPass = user.getMikrotikServer().getPassword();
 
+        // 1. DELETAR DO BANCO PRIMEIRO (flush para expor FK constraints)
+        // Se houver contratos vinculados, o banco rejeita e o Mikrotik não é tocado.
         repository.delete(user);
-        log.info("Usuário PPPoE deletado: {}", id);
+        repository.flush();
+
+        // 2. DELETAR DO MIKROTIK VIA API
+        // Se o Mikrotik falhar, @Transactional reverte a deleção do banco automaticamente.
+        apiService.deletePppoeUser(host, apiPort, serverUser, serverPass, username);
+        log.info("Usuário PPPoE deletado com sucesso: {} (Banco + Mikrotik)", id);
     }
 
     @Transactional
@@ -218,18 +232,34 @@ public class PppoeUserService {
         PppoeUser user = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário PPPoE não encontrado: " + id));
 
-        apiService.disablePppoeUser(
-                user.getMikrotikServer().getIpAddress(),
-                user.getMikrotikServer().getApiPort(),
-                user.getMikrotikServer().getUsername(),
-                user.getMikrotikServer().getPassword(),
-                user.getUsername()
-        );
-
+        // 1. PERSISTIR NO BANCO PRIMEIRO (dentro da transação)
         user.setActive(false);
         user.setUpdatedAt(LocalDateTime.now());
         repository.save(user);
-        log.info("Usuário PPPoE desativado: {}", id);
+
+        // 2. CHAMAR MIKROTIK APÓS O COMMIT — mesma garantia do publishEvent do ContractService.
+        // REGRA DE OURO: nunca segurar connection pool esperando resposta de hardware.
+        final String host       = user.getMikrotikServer().getIpAddress();
+        final Integer apiPort   = user.getMikrotikServer().getApiPort();
+        final String serverUser = user.getMikrotikServer().getUsername();
+        final String serverPass = user.getMikrotikServer().getPassword();
+        final String username   = user.getUsername();
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                log.info("Desativando usuário PPPoE no Mikrotik após commit: {}", username);
+                try {
+                    apiService.disablePppoeUser(host, apiPort, serverUser, serverPass, username);
+                    log.info("✅ Usuário PPPoE desativado no Mikrotik: {}", username);
+                } catch (Exception e) {
+                    log.error("❌ Falha ao desativar PPPoE no Mikrotik: {} — {}", username, e.getMessage());
+                    // Banco já atualizado. Operador pode retentar manualmente.
+                }
+            }
+        });
+
+        log.info("Usuário PPPoE marcado como inativo no banco: {} (Mikrotik será desativado após commit)", id);
     }
 
     @Transactional
@@ -237,18 +267,33 @@ public class PppoeUserService {
         PppoeUser user = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário PPPoE não encontrado: " + id));
 
-        apiService.enablePppoeUser(
-                user.getMikrotikServer().getIpAddress(),
-                user.getMikrotikServer().getApiPort(),
-                user.getMikrotikServer().getUsername(),
-                user.getMikrotikServer().getPassword(),
-                user.getUsername()
-        );
-
+        // 1. PERSISTIR NO BANCO PRIMEIRO (dentro da transação)
         user.setActive(true);
         user.setUpdatedAt(LocalDateTime.now());
         repository.save(user);
-        log.info("Usuário PPPoE ativado: {}", id);
+
+        // 2. CHAMAR MIKROTIK APÓS O COMMIT
+        final String host       = user.getMikrotikServer().getIpAddress();
+        final Integer apiPort   = user.getMikrotikServer().getApiPort();
+        final String serverUser = user.getMikrotikServer().getUsername();
+        final String serverPass = user.getMikrotikServer().getPassword();
+        final String username   = user.getUsername();
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                log.info("Ativando usuário PPPoE no Mikrotik após commit: {}", username);
+                try {
+                    apiService.enablePppoeUser(host, apiPort, serverUser, serverPass, username);
+                    log.info("✅ Usuário PPPoE ativado no Mikrotik: {}", username);
+                } catch (Exception e) {
+                    log.error("❌ Falha ao ativar PPPoE no Mikrotik: {} — {}", username, e.getMessage());
+                    // Banco já atualizado. Operador pode retentar manualmente.
+                }
+            }
+        });
+
+        log.info("Usuário PPPoE marcado como ativo no banco: {} (Mikrotik será ativado após commit)", id);
     }
 
     @Transactional
