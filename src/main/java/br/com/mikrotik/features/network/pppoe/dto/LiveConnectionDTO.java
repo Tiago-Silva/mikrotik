@@ -11,6 +11,9 @@ import lombok.Data;
 @Schema(description = "Dados da conexão ativa de um cliente consultados diretamente no Mikrotik")
 public class LiveConnectionDTO {
 
+    @Schema(description = "ID do contrato", example = "15")
+    private Long contractId;
+
     @Schema(description = "ID do cliente no sistema", example = "42")
     private Long customerId;
 
@@ -19,6 +22,12 @@ public class LiveConnectionDTO {
 
     @Schema(description = "Username PPPoE", example = "joaosilva")
     private String pppoeUsername;
+
+    @Schema(description = "Senha PPPoE do usuário (use com cuidado)", example = "s3cr3t")
+    private String pppoePassword;
+
+    @Schema(description = "Perfil PPPoE associado (plano de velocidade)", example = "plano-100mb")
+    private String pppoeProfile;
 
     @Schema(description = "IP remoto atribuído ao cliente", example = "10.10.1.55")
     private String remoteAddress;
