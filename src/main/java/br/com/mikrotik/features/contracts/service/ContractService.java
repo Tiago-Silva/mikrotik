@@ -24,7 +24,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,8 +42,7 @@ public class ContractService {
     private final ServicePlanRepository servicePlanRepository;
     private final PppoeUserRepository pppoeUserRepository;
     private final AddressRepository addressRepository;
-    private final MikrotikApiService mikrotikApiService; // API service for better performance
-    private final PasswordEncoder passwordEncoder;
+    private final MikrotikApiService mikrotikApiService;
     private final ApplicationEventPublisher eventPublisher;
 
     /**
@@ -558,7 +556,7 @@ public class ContractService {
             PppoeUser pppoeUser = new PppoeUser();
             pppoeUser.setCompanyId(contract.getCompanyId());
             pppoeUser.setUsername(username);
-            pppoeUser.setPassword(passwordEncoder.encode(password));
+            pppoeUser.setPassword(password);
             pppoeUser.setEmail(customer.getEmail() != null ? customer.getEmail() : username + "@cliente.local");
             pppoeUser.setComment(comentario);
             pppoeUser.setStatus(PppoeUser.UserStatus.OFFLINE);
@@ -640,7 +638,7 @@ public class ContractService {
         SecureRandom random = new SecureRandom();
         StringBuilder password = new StringBuilder();
 
-        for (int i = 0; i < 12; i++) {
+        for (int i = 0; i < 16; i++) {
             password.append(chars.charAt(random.nextInt(chars.length())));
         }
 
