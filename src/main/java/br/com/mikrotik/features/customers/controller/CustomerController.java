@@ -6,7 +6,7 @@ import br.com.mikrotik.features.customers.dto.CustomerDTO;
 import br.com.mikrotik.features.customers.model.Customer;
 import br.com.mikrotik.features.customers.service.CustomerService;
 import br.com.mikrotik.features.network.pppoe.dto.LiveConnectionDTO;
-import br.com.mikrotik.features.network.pppoe.service.CustomerMonitoringService;
+import br.com.mikrotik.features.network.pppoe.service.ContractMonitoringService;
 import br.com.mikrotik.shared.infrastructure.security.RequireModuleAccess;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -34,7 +34,6 @@ import java.time.LocalDate;
 public class CustomerController {
 
     private final CustomerService customerService;
-    private final CustomerMonitoringService customerMonitoringService;
 
     @PostMapping
     @RequireModuleAccess(module = SystemModule.CUSTOMERS, action = ModuleAction.CREATE)
@@ -171,17 +170,5 @@ public class CustomerController {
         log.info("GET /api/customers/count/status/{} - Contando clientes", status);
         long count = customerService.countByStatus(status);
         return ResponseEntity.ok(count);
-    }
-
-    @GetMapping("/{customerId}/live")
-    @RequireModuleAccess(module = SystemModule.CUSTOMERS, action = ModuleAction.VIEW)
-    @Operation(
-            summary = "Conexão ativa do cliente (ao vivo)",
-            description = "Consulta diretamente o Mikrotik e retorna a sessão PPPoE ativa do cliente. " +
-                    "Use para monitoramento sob demanda — não para listagem em massa."
-    )
-    public ResponseEntity<LiveConnectionDTO> getLiveConnectionByCustomer(@PathVariable Long customerId) {
-        log.info("GET /api/connections/customer/{}/live - Consultando sessão ativa no Mikrotik", customerId);
-        return ResponseEntity.ok(customerMonitoringService.getLiveConnectionByCustomerId(customerId));
     }
 }
