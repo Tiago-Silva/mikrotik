@@ -5,6 +5,8 @@ import br.com.mikrotik.features.auth.model.SystemModule;
 import br.com.mikrotik.features.contracts.dto.ContractDTO;
 import br.com.mikrotik.features.contracts.model.Contract;
 import br.com.mikrotik.features.contracts.service.ContractService;
+import br.com.mikrotik.features.network.pppoe.dto.LiveConnectionDTO;
+import br.com.mikrotik.features.network.pppoe.service.ContractMonitoringService;
 import br.com.mikrotik.shared.infrastructure.security.RequireModuleAccess;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -33,6 +35,7 @@ import java.time.LocalDate;
 public class ContractController {
 
     private final ContractService contractService;
+    private final ContractMonitoringService contractMonitoringService;
 
     @PostMapping
     @RequireModuleAccess(module = SystemModule.CONTRACTS, action = ModuleAction.CREATE)
@@ -208,5 +211,18 @@ public class ContractController {
         log.info("GET /api/contracts/count/status/{}", status);
         long count = contractService.countByStatus(status);
         return ResponseEntity.ok(count);
+    }
+
+    @GetMapping("/{id}/live")
+    @RequireModuleAccess(module = SystemModule.CONTRACTS, action = ModuleAction.VIEW)
+    @Operation(
+            summary = "Conexão ativa do contrato (ao vivo)",
+            description = "Consulta diretamente o Mikrotik e retorna a sessão PPPoE ativa do contrato, " +
+                    "incluindo login, senha e perfil PPPoE vinculados. " +
+                    "Use para monitoramento sob demanda — não para listagem em massa."
+    )
+    public ResponseEntity<LiveConnectionDTO> getLiveConnection(@PathVariable Long id) {
+        log.info("GET /api/contracts/{}/live - Consultando sessão ativa no Mikrotik", id);
+        return ResponseEntity.ok(contractMonitoringService.getLiveConnectionByContractId(id));
     }
 }
