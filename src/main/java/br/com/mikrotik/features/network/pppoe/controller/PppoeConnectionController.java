@@ -5,7 +5,7 @@ import br.com.mikrotik.features.auth.model.SystemModule;
 import br.com.mikrotik.shared.infrastructure.security.RequireModuleAccess;
 import br.com.mikrotik.features.network.pppoe.dto.LiveConnectionDTO;
 import br.com.mikrotik.features.network.pppoe.dto.PppoeConnectionDTO;
-import br.com.mikrotik.features.network.pppoe.service.CustomerMonitoringService;
+import br.com.mikrotik.features.network.pppoe.service.ContractMonitoringService;
 import br.com.mikrotik.features.network.pppoe.service.PppoeConnectionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -28,7 +28,7 @@ import org.springframework.web.bind.annotation.*;
 public class PppoeConnectionController {
 
     private final PppoeConnectionService service;
-    private final CustomerMonitoringService customerMonitoringService;
+    private final ContractMonitoringService customerMonitoringService;
 
     @GetMapping("/{id}")
     @RequireModuleAccess(module = SystemModule.NETWORK, action = ModuleAction.VIEW)
@@ -86,6 +86,6 @@ public class PppoeConnectionController {
     )
     public ResponseEntity<LiveConnectionDTO> getLiveConnectionByCustomer(@PathVariable Long customerId) {
         log.info("GET /api/connections/customer/{}/live - Consultando sessão ativa no Mikrotik", customerId);
-        return ResponseEntity.ok(customerMonitoringService.getLiveConnectionByCustomerId(customerId));
+        return ResponseEntity.ok(customerMonitoringService.getLiveConnectionByContractId(customerId));
     }
 }
