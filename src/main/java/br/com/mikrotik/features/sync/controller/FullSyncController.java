@@ -6,6 +6,7 @@ import br.com.mikrotik.shared.infrastructure.security.RequireModuleAccess;
 
 import br.com.mikrotik.features.sync.dto.FullSyncConfigDTO;
 import br.com.mikrotik.features.sync.dto.FullSyncResultDTO;
+import br.com.mikrotik.features.sync.dto.ParsePreviewDTO;
 import br.com.mikrotik.features.sync.service.FullSyncService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -41,10 +42,14 @@ public class FullSyncController {
             4. **Clientes** - Cria clientes automaticamente baseado nos comentários dos usuários PPPoE
             5. **Contratos** - Cria e ativa contratos vinculando Cliente + Plano + PPPoE
             
-            **PARSING INTELIGENTE:**
-            - Extrai nome do cliente do comentário ou username
-            - Identifica endereço (rua, travessa, avenida + número)
-            - Cria endereço de instalação automaticamente
+            **PARSING INTELIGENTE (baseado no padrão real do MikroTik):**
+            - **Username (campo Name)** → nome do cliente (ex: `elianabatista` → `Elianabatista`)
+            - **Comentário** → endereço/localização (ex: `rua 1 n120` → rua: `Rua 1`, nº: `120`)
+            - Comentários com CPF são limpos automaticamente (CPF não é extraído como endereço)
+            - Perfil `BLOQUEADO` → contrato criado como `SUSPENDED_FINANCIAL`
+            
+            **ANTES DE EXECUTAR:** Use `GET /api/sync/parse-preview/{serverId}` para visualizar
+            como os dados serão interpretados sem persistir nada.
             
             **CONFIGURAÇÕES:**
             - `serverId`: ID do servidor MikroTik (obrigatório)
@@ -60,10 +65,11 @@ public class FullSyncController {
             - Recomendado executar em horário de baixo movimento
             - Processo pode demorar alguns minutos dependendo da quantidade de usuários
             
-            **EXEMPLO DE COMENTÁRIO PARSEADO:**
-            - "felipe achy/ nalmar alcantara n255" → Nome: "Felipe Achy", Endereço: "Nalmar Alcantara", Número: "255"
-            - "rua7 n128" → Nome do username, Endereço: "Rua7", Número: "128"
-            - Sem comentário → Usa username como nome do cliente
+            **EXEMPLOS DE PARSING:**
+            - Username: `emersonmoura` + Comment: `rua 3 casinhas` → Nome: `Emersonmoura`, Rua: `Rua 3 Casinhas`
+            - Username: `elisangelasilvalima` + Comment: `Rua Dr Alterives Marciel, 135 Bairro Bela Vista - CPF 95266413587`
+              → Nome: `Elisangelasilvalima`, Rua: `Rua Dr Alterives Marciel`, Nº: `135`, Bairro: `Bela Vista`
+            - Username: `eva` + Comment: (vazio) → Nome: `Eva`, sem endereço
             """
     )
     public ResponseEntity<FullSyncResultDTO> fullSync(@Valid @RequestBody FullSyncConfigDTO config) {
@@ -95,6 +101,31 @@ public class FullSyncController {
         log.info("==========================================================");
 
         return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/parse-preview/{serverId}")
+    @RequireModuleAccess(module = SystemModule.SYNC, action = ModuleAction.VIEW)
+    @Operation(
+        summary = "Pré-visualização do parsing PPPoE → Cliente",
+        description = """
+            **Operação somente leitura** — não persiste nada no banco.
+            
+            Mostra como cada usuário PPPoE do MikroTik seria interpretado pelo sistema:
+            - `pppoeUsername`       → login PPPoE (campo Name no MikroTik)
+            - `resolvedCustomerName`→ nome do cliente que seria criado
+            - `originalComment`     → comentário original do MikroTik
+            - `parsedStreet`        → rua extraída do comentário
+            - `parsedNumber`        → número extraído do comentário
+            - `parsedNeighborhood`  → bairro extraído do comentário
+            - `alreadySynced`       → true se já existe contrato para este PPPoE
+            - `warning`             → aviso de parsing (se houver)
+            
+            Use este endpoint **antes** do full-sync para validar os dados.
+            """
+    )
+    public ResponseEntity<ParsePreviewDTO> parsePreview(@PathVariable Long serverId) {
+        log.info("GET /api/sync/parse-preview/{} - Pré-visualização de parsing", serverId);
+        return ResponseEntity.ok(fullSyncService.parsePreview(serverId));
     }
 }
 

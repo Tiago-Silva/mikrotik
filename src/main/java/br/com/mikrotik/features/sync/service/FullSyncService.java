@@ -4,6 +4,8 @@ import br.com.mikrotik.features.sync.dto.FullSyncConfigDTO;
 import br.com.mikrotik.features.sync.dto.FullSyncResultDTO;
 import br.com.mikrotik.features.sync.dto.SyncResultDTO;
 import br.com.mikrotik.features.sync.dto.CustomerInfoParseResult;
+import br.com.mikrotik.features.sync.dto.ParsePreviewDTO;
+import br.com.mikrotik.features.sync.dto.ParsePreviewDTO.ParsePreviewItemDTO;
 import br.com.mikrotik.shared.infrastructure.exception.ResourceNotFoundException;
 import br.com.mikrotik.features.network.server.model.MikrotikServer;
 import br.com.mikrotik.features.network.pppoe.model.PppoeUser;
@@ -31,7 +33,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -40,6 +45,7 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 @Slf4j
 public class FullSyncService {
+
 
     private final MikrotikServerRepository serverRepository;
     private final PppoeProfileService profileService;
@@ -51,6 +57,43 @@ public class FullSyncService {
     private final ContractService contractService;
     private final AddressRepository addressRepository;
     private final EntityManager entityManager;
+
+    /**
+     * Pré-visualização do parsing: retorna o que seria criado para cada PPPoE
+     * SEM persistir nada. Útil para validar antes de executar o fullSync.
+     */
+    @Transactional(readOnly = true)
+    public ParsePreviewDTO parsePreview(Long serverId) {
+        Long companyId = CompanyContextHolder.getCompanyId();
+        List<PppoeUser> users = pppoeUserService.findAll();
+        List<ParsePreviewItemDTO> items = new ArrayList<>();
+
+        for (PppoeUser user : users) {
+            CustomerInfoParseResult parsed = parseCustomerInfo(user);
+
+            boolean alreadySynced = contractRepository.findByPppoeUserIdAndCompanyId(
+                    user.getId(), companyId).isPresent();
+
+            items.add(ParsePreviewItemDTO.builder()
+                    .pppoeUsername(user.getUsername())
+                    .resolvedCustomerName(parsed.getCustomerName())
+                    .originalComment(parsed.getOriginalComment())
+                    .parsedStreet(parsed.getAddress())
+                    .parsedNumber(parsed.getAddressNumber())
+                    .parsedNeighborhood(parsed.getNeighborhood())
+                    .parsedPhone(parsed.getPhone())
+                    .profile(user.getProfile() != null ? user.getProfile().getName() : null)
+                    .alreadySynced(alreadySynced)
+                    .warning(parsed.getWarningMessage())
+                    .build());
+        }
+
+        log.info("Parse preview: {} usuários analisados (servidor: {})", items.size(), serverId);
+        return ParsePreviewDTO.builder()
+                .total(items.size())
+                .items(items)
+                .build();
+    }
 
     /**
      * Sincronização completa: Profiles → ServicePlans → PPPoE Users → Customers → Contracts
@@ -67,6 +110,12 @@ public class FullSyncService {
 
         FullSyncResultDTO result = FullSyncResultDTO.builder().build();
         Long companyId = CompanyContextHolder.getCompanyId();
+
+        // ✅ Mapa em memória: pppoeUserId → customerId
+        // Substitui o hack [CUSTOMER_ID:xxx] no campo comment.
+        // O entityManager.clear() entre fases descartava o objeto em memória antes
+        // que a Fase 5 pudesse lê-lo — o Map persiste durante toda a execução do sync.
+        Map<Long, Long> pppoeUserToCustomerMap = new HashMap<>();
 
         try {
             // Validar servidor
@@ -104,7 +153,7 @@ public class FullSyncService {
             // FASE 4: Criar Clientes a partir dos comentários PPPoE
             if (config.getCreateMissingCustomers()) {
                 log.info("\n--- FASE 4: Criando Clientes ---");
-                createCustomersPhase(result, companyId);
+                createCustomersPhase(result, companyId, pppoeUserToCustomerMap);
 
                 // ⚠️ CRÍTICO: Flush e clear após criar clientes
                 entityManager.flush();
@@ -114,7 +163,7 @@ public class FullSyncService {
             // FASE 5: Criar Contratos
             if (config.getCreateContracts()) {
                 log.info("\n--- FASE 5: Criando Contratos ---");
-                createContractsPhase(config, result, companyId);
+                createContractsPhase(config, result, companyId, pppoeUserToCustomerMap);
 
                 // ⚠️ CRÍTICO: Flush final
                 entityManager.flush();
@@ -254,71 +303,87 @@ public class FullSyncService {
     }
 
     /**
-     * FASE 4: Criar Clientes a partir dos comentários dos usuários PPPoE
+     * FASE 4: Criar Clientes a partir dos usuários PPPoE
+     * <p>
+     * REGRA DE PARSING (baseado nos dados reais do MikroTik):
+     * - USERNAME  → nome do cliente  (ex: "elianabatista" → "Eliana Batista")
+     * - COMMENT   → endereço/localização (ex: "rua 1 n120", "manoel b paixa n63")
+     * <p>
+     * O mapa pppoeUserToCustomerMap é preenchido aqui e consumido na Fase 5,
+     * eliminando o hack de escrita no campo comment (que era perdido após entityManager.clear()).
      */
-    private void createCustomersPhase(FullSyncResultDTO result, Long companyId) {
+    private void createCustomersPhase(FullSyncResultDTO result, Long companyId,
+                                      Map<Long, Long> pppoeUserToCustomerMap) {
         try {
             List<PppoeUser> allPppoeUsers = pppoeUserService.findAll();
 
             for (PppoeUser pppoeUser : allPppoeUsers) {
                 try {
-                    // Verificar se já existe cliente vinculado a este usuário PPPoE
+                    // ── 1. Re-sync: contrato já existe → registrar no mapa e pular ──
                     Optional<Contract> existingContract = contractRepository.findByPppoeUserIdAndCompanyId(
                             pppoeUser.getId(), companyId);
 
                     if (existingContract.isPresent()) {
+                        Long existingCustomerId = existingContract.get().getCustomerId();
+                        pppoeUserToCustomerMap.put(pppoeUser.getId(), existingCustomerId);
                         result.setExistingCustomers(result.getExistingCustomers() + 1);
-                        log.debug("Cliente já existe para PPPoE: {}", pppoeUser.getUsername());
+                        log.debug("Contrato já existe para PPPoE: {} → customerId: {}",
+                                pppoeUser.getUsername(), existingCustomerId);
                         continue;
                     }
 
-                    // Parse informações do comentário
+                    // ── 2. Parse: username = nome; comment = endereço ──
                     CustomerInfoParseResult parseResult = parseCustomerInfo(pppoeUser);
 
-                    if (!parseResult.getParseSuccess() && parseResult.getWarningMessage() != null) {
+                    if (parseResult.getWarningMessage() != null) {
                         result.getWarnings().add(parseResult.getWarningMessage());
                     }
 
-                    // Verificar se já existe cliente com esse nome
+                    // ── 3. Deduplicação por nome normalizado ──
                     Optional<Customer> existingCustomer = customerRepository.findByNameAndCompanyId(
                             parseResult.getCustomerName(), companyId);
 
                     if (existingCustomer.isPresent()) {
                         result.setExistingCustomers(result.getExistingCustomers() + 1);
-                        log.debug("Cliente já existe com nome: {}", parseResult.getCustomerName());
-
-                        // Armazenar para criar contrato depois
-                        pppoeUser.setComment(pppoeUser.getComment() + " [CUSTOMER_ID:" + existingCustomer.get().getId() + "]");
+                        pppoeUserToCustomerMap.put(pppoeUser.getId(), existingCustomer.get().getId());
+                        log.debug("Cliente já existe: {} (PPPoE: {})",
+                                parseResult.getCustomerName(), pppoeUser.getUsername());
                         continue;
                     }
 
-                    // Criar novo cliente
+                    // ── 4. Criar novo cliente ──
                     Customer newCustomer = Customer.builder()
                             .companyId(companyId)
                             .name(parseResult.getCustomerName())
                             .type(Customer.CustomerType.FISICA)
-                            .document("000.000.000-00") // Documento padrão - deve ser atualizado depois
+                            .document("000.000.000-00") // Atualizar manualmente após sincronização
                             .email(pppoeUser.getEmail() != null ? pppoeUser.getEmail() :
                                    pppoeUser.getUsername() + "@pendente.com")
                             .phonePrimary(parseResult.getPhone())
                             .status(Customer.CustomerStatus.ACTIVE)
-                            .notes("Cliente criado automaticamente na sincronização do MikroTik\n" +
-                                   "PPPoE Username: " + pppoeUser.getUsername() + "\n" +
-                                   "Comentário original: " + parseResult.getOriginalComment())
+                            .notes("Criado via sincronização do MikroTik\n" +
+                                   "Login PPPoE: " + pppoeUser.getUsername() + "\n" +
+                                   (parseResult.getOriginalComment() != null && !parseResult.getOriginalComment().isBlank()
+                                       ? "Localização original: " + parseResult.getOriginalComment()
+                                       : ""))
                             .createdAt(LocalDateTime.now())
                             .updatedAt(LocalDateTime.now())
                             .build();
 
                     customerRepository.save(newCustomer);
-                    entityManager.flush(); // ⚠️ CRÍTICO: Flush para garantir ID gerado
+                    entityManager.flush(); // ⚠️ Garantir ID antes de criar endereço
 
-                    // Criar endereço se tiver informações
+                    // ✅ Registrar no mapa em memória para Fase 5
+                    pppoeUserToCustomerMap.put(pppoeUser.getId(), newCustomer.getId());
+
+                    // ── 5. Endereço de instalação (extraído do comment) ──
                     if (parseResult.getAddress() != null) {
                         Address address = Address.builder()
                                 .customerId(newCustomer.getId())
                                 .customer(newCustomer)
                                 .street(parseResult.getAddress())
-                                .number(parseResult.getAddressNumber() != null ? parseResult.getAddressNumber() : "S/N")
+                                .number(parseResult.getAddressNumber() != null
+                                        ? parseResult.getAddressNumber() : "S/N")
                                 .district(parseResult.getNeighborhood())
                                 .city("A definir")
                                 .state("BA")
@@ -328,23 +393,26 @@ public class FullSyncService {
                                 .build();
 
                         addressRepository.save(address);
-                        entityManager.flush(); // Flush endereço também
+                        entityManager.flush();
                     }
 
                     result.setCreatedCustomers(result.getCreatedCustomers() + 1);
                     result.getCreatedCustomerNames().add(newCustomer.getName());
 
-
-                    log.info("Cliente criado: {} (ID: {}) para PPPoE: {}",
-                            newCustomer.getName(), newCustomer.getId(), pppoeUser.getUsername());
+                    log.info("✅ Cliente criado: {} (ID: {}) | PPPoE: {} | Endereço: {}",
+                            newCustomer.getName(), newCustomer.getId(),
+                            pppoeUser.getUsername(), parseResult.getAddress());
 
                 } catch (Exception e) {
                     log.error("Erro ao criar cliente para PPPoE {}: {}", pppoeUser.getUsername(), e.getMessage());
-                    result.getErrorMessages().add("Erro ao criar cliente para " + pppoeUser.getUsername() + ": " + e.getMessage());
+                    result.getErrorMessages().add("Erro ao criar cliente para "
+                            + pppoeUser.getUsername() + ": " + e.getMessage());
                 }
             }
 
-            log.info("Clientes: {} criados, {} já existiam", result.getCreatedCustomers(), result.getExistingCustomers());
+            log.info("Clientes: {} criados, {} já existiam | Mapa fase-4→5: {} entradas",
+                    result.getCreatedCustomers(), result.getExistingCustomers(),
+                    pppoeUserToCustomerMap.size());
 
         } catch (Exception e) {
             log.error("Erro ao criar clientes: {}", e.getMessage(), e);
@@ -354,8 +422,12 @@ public class FullSyncService {
 
     /**
      * FASE 5: Criar Contratos vinculando Cliente + ServicePlan + PPPoE User
+     * <p>
+     * Usa o pppoeUserToCustomerMap preenchido na Fase 4 para localizar o cliente
+     * de cada PPPoE sem depender de escrita no campo comment (hack removido).
      */
-    private void createContractsPhase(FullSyncConfigDTO config, FullSyncResultDTO result, Long companyId) {
+    private void createContractsPhase(FullSyncConfigDTO config, FullSyncResultDTO result,
+                                      Long companyId, Map<Long, Long> pppoeUserToCustomerMap) {
         try {
             List<PppoeUser> allPppoeUsers = pppoeUserService.findAll();
 
@@ -370,19 +442,22 @@ public class FullSyncService {
                         continue;
                     }
 
-                    // Buscar ou extrair ID do cliente do comentário
-                    Long customerId = extractCustomerIdFromComment(pppoeUser.getComment());
+                    // ── Localizar cliente via mapa preenchido na Fase 4 ──
+                    Long customerId = pppoeUserToCustomerMap.get(pppoeUser.getId());
 
                     if (customerId == null) {
-                        // Tentar buscar cliente pelo nome parseado
+                        // Fallback: tentar pelo nome derivado do username
                         CustomerInfoParseResult parseResult = parseCustomerInfo(pppoeUser);
                         Optional<Customer> customer = customerRepository.findByNameAndCompanyId(
                                 parseResult.getCustomerName(), companyId);
 
                         if (customer.isPresent()) {
                             customerId = customer.get().getId();
+                            pppoeUserToCustomerMap.put(pppoeUser.getId(), customerId);
                         } else {
-                            result.getWarnings().add("Cliente não encontrado para PPPoE: " + pppoeUser.getUsername());
+                            result.getWarnings().add("Cliente não encontrado para PPPoE: "
+                                    + pppoeUser.getUsername() + " — execute a Fase 4 primeiro");
+                            result.setFailedContracts(result.getFailedContracts() + 1);
                             continue;
                         }
                     }
@@ -460,74 +535,142 @@ public class FullSyncService {
     }
 
     /**
-     * Parse inteligente de informações do comentário PPPoE
+     * Parse inteligente das informações de um usuário PPPoE do MikroTik.
+     * <p>
+     * ESTRATÉGIA (baseada nos dados reais observados):
+     * <pre>
+     *  Campo "Name" (username) no MikroTik  → NOME DO CLIENTE
+     *    ex: "elianabatista"   → "Eliana Batista"
+     *    ex: "emersonmoura"    → "Emerson Moura"
+     *    ex: "eva"             → "Eva"
+     *
+     *  Campo "Comment" no MikroTik          → ENDEREÇO / LOCALIZAÇÃO
+     *    ex: "rua 1 n120"                   → rua: "Rua 1", número: "120"
+     *    ex: "manoel b paixa n63"            → rua: "Manoel B Paixa", número: "63"
+     *    ex: "rua po?oes n90 pg"             → rua: "Rua Po?oes", número: "90", bairro: "Pg"
+     *    ex: "Rua Dr Alterives Marciel, 135 Bairro Bela Vista - CPF 95266413587"
+     *                                        → rua: "Rua Dr Alterives Marciel", número: "135",
+     *                                           bairro: "Bela Vista", CPF ignorado
+     *    ex: "dene"                          → rua: "Dene" (referência de localização)
+     *    ex: vazio / null                    → sem endereço
+     * </pre>
      */
     private CustomerInfoParseResult parseCustomerInfo(PppoeUser pppoeUser) {
-        String comment = pppoeUser.getComment();
         String username = pppoeUser.getUsername();
+        String comment  = pppoeUser.getComment();
+
+        // ── Nome do cliente: derivado do username ──
+        String customerName = splitCamelCaseUsername(username);
 
         CustomerInfoParseResult result = CustomerInfoParseResult.builder()
+                .customerName(customerName)
                 .originalComment(comment)
-                .parseSuccess(false)
+                .parseSuccess(true)
                 .build();
 
-        // Se não tem comentário, usa o username como nome
-        if (comment == null || comment.trim().isEmpty() || comment.equals("Sincronizado do Mikrotik")) {
-            result.setCustomerName(capitalizeWords(username));
-            result.setParseSuccess(true);
-            result.setWarningMessage("PPPoE " + username + ": sem comentário, usando username como nome");
+        // Sem comentário: apenas nome, sem endereço
+        if (comment == null || comment.isBlank()) {
+            result.setWarningMessage("PPPoE '" + username + "': sem comentário — endereço não preenchido");
             return result;
         }
 
-        // Remover marcadores de CUSTOMER_ID se existir
-        comment = comment.replaceAll("\\[CUSTOMER_ID:\\d+]", "").trim();
+        // Remover marcadores legados de CUSTOMER_ID (caso existam de versões anteriores)
+        String rawComment = comment.replaceAll("\\[CUSTOMER_ID:\\d+]", "").trim();
 
-        // Patterns para extração
-        // Exemplo: "felipe achy/ nalmar alcantara n255/ ana carolina"
-        // Exemplo: "rua7"
-        // Exemplo: "travessa o mangabeira n214"
+        // ── Extrair telefone (padrão: 8 a 11 dígitos isolados) ──
+        Pattern phonePattern = Pattern.compile("\\b(\\d{8,11})\\b");
+        Matcher phoneMatcher  = phonePattern.matcher(rawComment);
+        String phone = null;
+        if (phoneMatcher.find()) {
+            // Verificar se não parece CPF (11 dígitos contíguos com contexto de CPF)
+            boolean isCpf = rawComment.toUpperCase().contains("CPF");
+            if (!isCpf || phoneMatcher.group(1).length() != 11) {
+                phone = phoneMatcher.group(1);
+            }
+        }
 
-        String customerName = null;
-        String address = null;
+        // Remover CPF do texto de endereço (ex: "- CPF 95266413587")
+        String cleanedComment = rawComment.replaceAll("[-–]?\\s*CPF\\s+\\d+", "").trim();
+
+        // ── Extrair número do imóvel: padrão "n<dígitos>", ",<espaço><dígitos>" ──
         String addressNumber = null;
+        Pattern numPattern = Pattern.compile("\\bn\\s*(\\d+)|,\\s*(\\d+)(?=\\s|$)", Pattern.CASE_INSENSITIVE);
+        Matcher numMatcher  = numPattern.matcher(cleanedComment);
+        if (numMatcher.find()) {
+            addressNumber = numMatcher.group(1) != null ? numMatcher.group(1) : numMatcher.group(2);
+            // Remover o trecho do número do texto de rua
+            cleanedComment = cleanedComment.substring(0, numMatcher.start()).trim();
+        }
+
+        // ── Extrair bairro: após "bairro" ou "pg" isolado ao final ──
         String neighborhood = null;
-
-        // Tentar extrair nome (primeira parte antes de / ou n<número>)
-        Pattern namePattern = Pattern.compile("^([^/n]+?)(?:/|n\\d|$)", Pattern.CASE_INSENSITIVE);
-        Matcher nameMatcher = namePattern.matcher(comment);
-        if (nameMatcher.find()) {
-            customerName = nameMatcher.group(1).trim();
-        }
-
-        // Tentar extrair endereço (rua, travessa, avenida, etc)
-        Pattern addressPattern = Pattern.compile("(rua|travessa|avenida|av|trav)\\s+([^/n]+)", Pattern.CASE_INSENSITIVE);
-        Matcher addressMatcher = addressPattern.matcher(comment);
-        if (addressMatcher.find()) {
-            address = addressMatcher.group(1) + " " + addressMatcher.group(2).trim();
-        }
-
-        // Tentar extrair número
-        Pattern numberPattern = Pattern.compile("\\bn\\s*(\\d+)", Pattern.CASE_INSENSITIVE);
-        Matcher numberMatcher = numberPattern.matcher(comment);
-        if (numberMatcher.find()) {
-            addressNumber = numberMatcher.group(1);
-        }
-
-        // Se não conseguiu extrair nome, usa username
-        if (customerName == null || customerName.isEmpty()) {
-            customerName = capitalizeWords(username);
-            result.setWarningMessage("PPPoE " + username + ": não foi possível extrair nome do comentário");
+        Pattern bairroPattern = Pattern.compile("\\bbairro\\s+(.+)$", Pattern.CASE_INSENSITIVE);
+        Matcher bairroMatcher  = bairroPattern.matcher(cleanedComment);
+        if (bairroMatcher.find()) {
+            neighborhood   = capitalizeWords(bairroMatcher.group(1).trim());
+            cleanedComment = cleanedComment.substring(0, bairroMatcher.start()).trim();
         } else {
-            customerName = capitalizeWords(customerName);
+            // Sufixo de bairro abreviado ao final (ex: "pg", "cj")
+            Pattern suffixPattern = Pattern.compile("\\s+(\\w{1,4})$", Pattern.CASE_INSENSITIVE);
+            Matcher suffixMatcher  = suffixPattern.matcher(cleanedComment);
+            if (suffixMatcher.find()) {
+                String candidate = suffixMatcher.group(1);
+                // Só trata como bairro se for palavra curta não-numérica após o número já removido
+                if (candidate.matches("[a-zA-Z]{1,4}") && addressNumber != null) {
+                    neighborhood   = capitalizeWords(candidate);
+                    cleanedComment = cleanedComment.substring(0, suffixMatcher.start()).trim();
+                }
+            }
         }
 
-        result.setCustomerName(customerName);
-        result.setAddress(address);
+        // ── Rua/localização: tudo que restou no comment limpo ──
+        String street = cleanedComment.isEmpty() ? null : capitalizeWords(cleanedComment);
+
+        result.setAddress(street);
         result.setAddressNumber(addressNumber);
         result.setNeighborhood(neighborhood);
-        result.setParseSuccess(true);
+        result.setPhone(phone);
 
         return result;
+    }
+
+    /**
+     * Converte um username sem espaços (camelCase ou tudo junto) em nome capitalizado.
+     * <p>
+     * Estratégia:
+     * - Se já contém espaço → apenas capitaliza as palavras.
+     * - Se parece camelCase (letra maiúscula no meio) → divide e capitaliza.
+     * - Se tudo minúsculo sem separador (caso mais comum: "elianabatista") →
+     *   não há como saber os limites sem dicionário; capitaliza apenas a 1ª letra
+     *   e deixa para o operador corrigir depois (comportamento seguro e não-destrutivo).
+     * <p>
+     * Exemplos:
+     *   "elianabatista"         → "Elianabatista"  (operador corrige depois)
+     *   "emersonmoura"          → "Emersonmoura"
+     *   "elisangelasilvalima"   → "Elisangelasilvalima"
+     *   "eva"                   → "Eva"
+     *   "fabioRamos"            → "Fabio Ramos"    (camelCase detectado)
+     *   "fabio ramos"           → "Fabio Ramos"    (já tem espaço)
+     */
+    private String splitCamelCaseUsername(String username) {
+        if (username == null || username.isBlank()) {
+            return "Desconhecido";
+        }
+
+        // Já tem espaço: apenas capitaliza
+        if (username.contains(" ")) {
+            return capitalizeWords(username);
+        }
+
+        // CamelCase: divide em palavras onde maiúscula aparece
+        // ex: "fabioRamos" → "Fabio Ramos"
+        String camelSplit = username.replaceAll("([a-z])([A-Z])", "$1 $2");
+        if (!camelSplit.equals(username)) {
+            return capitalizeWords(camelSplit);
+        }
+
+        // Tudo junto minúsculo: capitaliza apenas a 1ª letra (seguro)
+        return Character.toUpperCase(username.charAt(0)) + username.substring(1).toLowerCase();
     }
 
     /**
@@ -553,32 +696,15 @@ public class FullSyncService {
     }
 
     /**
-     * Extrai ID do cliente do comentário no formato [CUSTOMER_ID:123]
-     */
-    private Long extractCustomerIdFromComment(String comment) {
-        if (comment == null) {
-            return null;
-        }
-
-        Pattern pattern = Pattern.compile("\\[CUSTOMER_ID:(\\d+)]");
-        Matcher matcher = pattern.matcher(comment);
-
-        if (matcher.find()) {
-            return Long.parseLong(matcher.group(1));
-        }
-
-        return null;
-    }
-
-    /**
-     * Verifica se o profile é do tipo "BLOQUEADO" (case-insensitive)
-     * ⚠️ CRÍTICO: Profiles bloqueados devem gerar contratos SUSPENDED_FINANCIAL
+     * Verifica se o profile é do tipo "BLOQUEADO" (case-insensitive).
+     * ⚠️ CRÍTICO: Profiles bloqueados devem gerar contratos SUSPENDED_FINANCIAL.
+     * Também detecta variantes que contenham "bloqueado" (ex: "PLANO-BLOQUEADO").
      */
     private boolean isBlockedProfile(String profileName) {
         if (profileName == null) {
             return false;
         }
-        return profileName.trim().equalsIgnoreCase("BLOQUEADO");
+        return profileName.trim().toUpperCase().contains("BLOQUEADO");
     }
 }
 
