@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.AsyncConfigurer;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
 import java.lang.reflect.Method;
 import java.util.Arrays;
@@ -52,6 +53,27 @@ public class AsyncConfig implements AsyncConfigurer {
 
         log.info("✅ NetworkIntegrationExecutor configurado: core=2, max=5, queue=100");
         return executor;
+    }
+
+    /**
+     * Scheduler dedicado para @Scheduled (crons).
+     *
+     * CRÍTICO: sem este bean, o Spring tenta usar o getAsyncExecutor() como scheduler.
+     * Um ThreadPoolTaskExecutor NÃO É um TaskScheduler — não consegue interpretar
+     * expressões cron. Resultado: todos os @Scheduled são silenciados silenciosamente.
+     *
+     * O nome "taskScheduler" é detectado automaticamente pelo Spring Scheduling.
+     */
+    @Bean(name = "taskScheduler")
+    public ThreadPoolTaskScheduler taskScheduler() {
+        ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
+        scheduler.setPoolSize(5);
+        scheduler.setThreadNamePrefix("scheduled-task-");
+        scheduler.setErrorHandler(t ->
+                log.error("❌ Erro no scheduler: {}", t.getMessage(), t));
+        scheduler.initialize();
+        log.info("✅ TaskScheduler dedicado configurado: pool=5, prefix=scheduled-task-");
+        return scheduler;
     }
 
     /**
