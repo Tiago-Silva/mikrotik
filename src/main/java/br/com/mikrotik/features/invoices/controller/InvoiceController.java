@@ -4,9 +4,12 @@ import br.com.mikrotik.features.auth.model.ModuleAction;
 import br.com.mikrotik.features.auth.model.SystemModule;
 import br.com.mikrotik.shared.infrastructure.security.RequireModuleAccess;
 
+import br.com.mikrotik.features.invoices.dto.BillingResultDTO;
 import br.com.mikrotik.features.invoices.dto.InvoiceDTO;
 import br.com.mikrotik.features.invoices.model.Invoice;
+import br.com.mikrotik.features.invoices.service.BillingService;
 import br.com.mikrotik.features.invoices.service.InvoiceService;
+import br.com.mikrotik.shared.util.CompanyContextHolder;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -34,6 +37,23 @@ import java.util.List;
 public class InvoiceController {
 
     private final InvoiceService invoiceService;
+    private final BillingService billingService;
+
+    @PostMapping("/billing/generate")
+    @RequireModuleAccess(module = SystemModule.INVOICES, action = ModuleAction.CREATE)
+    @Operation(
+            summary = "Gerar faturas mensais em lote",
+            description = "Percorre todos os contratos ACTIVE da empresa e gera a fatura " +
+                          "de mensalidade do mês vigente. Idempotente: contratos que já " +
+                          "possuem fatura no mês são ignorados. O link PIX (AbacatePay) " +
+                          "é gerado de forma assíncrona após a persistência."
+    )
+    public ResponseEntity<BillingResultDTO> generateMonthlyInvoices() {
+        Long companyId = CompanyContextHolder.getCompanyId();
+        log.info("POST /api/invoices/billing/generate — empresa #{}", companyId);
+        BillingResultDTO result = billingService.generateMonthlyInvoices(companyId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(result);
+    }
 
     @PostMapping
     @RequireModuleAccess(module = SystemModule.INVOICES, action = ModuleAction.CREATE)
