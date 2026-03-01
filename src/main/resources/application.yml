@@ -53,6 +53,14 @@ mikrotik:
   password: ${MIKROTIK_PASSWORD}
   timeout: ${MIKROTIK_TIMEOUT:30000}
 
+# ========== GATEWAY DE PAGAMENTO — ABACATEPAY ==========
+# Docs: https://abacatepay.readme.io/reference
+# Para habilitar: defina ABACATEPAY_ENABLED=true e ABACATEPAY_API_KEY=<sua-chave>
+abacatepay:
+  enabled: ${ABACATEPAY_ENABLED:false}
+  api-key: ${ABACATEPAY_API_KEY:}
+  base-url: ${ABACATEPAY_BASE_URL:https://api.abacatepay.com/v1}
+
 # ========== JWT ==========
 jwt:
   secret: ${JWT_SECRET}
