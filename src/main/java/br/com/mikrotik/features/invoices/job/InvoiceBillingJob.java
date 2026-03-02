@@ -1,21 +1,16 @@
 package br.com.mikrotik.features.invoices.job;
 
 import br.com.mikrotik.features.invoices.dto.BillingResultDTO;
-import br.com.mikrotik.features.invoices.dto.InvoiceDTO;
 import br.com.mikrotik.features.companies.model.Company;
 import br.com.mikrotik.features.contracts.model.Contract;
 import br.com.mikrotik.features.companies.repository.CompanyRepository;
 import br.com.mikrotik.features.contracts.repository.ContractRepository;
-import br.com.mikrotik.features.invoices.model.Invoice;
 import br.com.mikrotik.features.invoices.repository.InvoiceRepository;
 import br.com.mikrotik.features.contracts.service.ContractService;
 import br.com.mikrotik.features.invoices.service.BillingService;
-import br.com.mikrotik.features.invoices.service.InvoiceService;
 import br.com.mikrotik.shared.util.CompanyContextHolder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -31,7 +26,6 @@ public class InvoiceBillingJob {
     private final ContractRepository contractRepository;
     private final CompanyRepository companyRepository;
     private final InvoiceRepository invoiceRepository;
-    private final InvoiceService invoiceService;
     private final ContractService contractService;
     private final BillingService billingService;
 
@@ -110,27 +104,15 @@ public class InvoiceBillingJob {
     }
 
     /**
-     * Atualiza faturas vencidas de uma empresa
+     * Atualiza faturas vencidas de uma empresa.
+     * Usa bulk UPDATE direto no banco — sem loop em memória, sem risco de
+     * paginação incompleta e sem depender do InvoiceService.
      */
     private void updateOverdueInvoicesForCompany(Long companyId) {
         CompanyContextHolder.setCompanyId(companyId);
-
         try {
-            // Buscar todas as faturas vencidas (sem paginação)
-            Page<InvoiceDTO> overdueInvoicesPage = invoiceService.findOverdue(Pageable.unpaged());
-            List<InvoiceDTO> overdueInvoices = overdueInvoicesPage.getContent();
-
-            int count = 0;
-            for (InvoiceDTO invoice : overdueInvoices) {
-                if (invoice.getStatus().name().equals("PENDING")) {
-                    invoiceService.updateStatus(invoice.getId(),
-                        Invoice.InvoiceStatus.OVERDUE);
-                    count++;
-                }
-            }
-
-            log.info("Empresa {}: {} faturas marcadas como vencidas", companyId, count);
-
+            int count = invoiceRepository.markOverduePendingInvoices(companyId, LocalDate.now());
+            log.info("Empresa {}: {} faturas PENDING marcadas como OVERDUE", companyId, count);
         } finally {
             CompanyContextHolder.clear();
         }
