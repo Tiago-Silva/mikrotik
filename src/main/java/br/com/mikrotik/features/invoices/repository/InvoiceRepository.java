@@ -3,10 +3,12 @@ package br.com.mikrotik.features.invoices.repository;
 import br.com.mikrotik.features.invoices.model.Invoice;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -58,10 +60,23 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
                                 @Param("month") LocalDate month,
                                 Pageable pageable);
 
-    // Buscar contratos com faturas vencidas há X dias ou mais para suspensão automática
+    // Marcar em lote faturas PENDING vencidas como OVERDUE (um único UPDATE no banco)
+    @Modifying
+    @Transactional
+    @Query("UPDATE Invoice i SET i.status = 'OVERDUE' " +
+           "WHERE i.companyId = :companyId " +
+           "AND i.status = 'PENDING' " +
+           "AND i.dueDate < :today")
+    int markOverduePendingInvoices(@Param("companyId") Long companyId,
+                                   @Param("today") LocalDate today);
+
+    // Buscar contratos com faturas vencidas há X dias ou mais para suspensão automática.
+    // IMPORTANTE: inclui PENDING e OVERDUE — o job de suspensão NÃO depende do job
+    // de atualização de status (02:00) ter rodado. Se o job das 02:00 falhar, a
+    // suspensão ainda ocorre corretamente às 03:00.
     @Query("SELECT DISTINCT i.contractId FROM Invoice i " +
            "WHERE i.companyId = :companyId " +
-           "AND i.status = 'OVERDUE' " +
+           "AND i.status IN ('PENDING', 'OVERDUE') " +
            "AND i.dueDate <= :suspensionDate")
     List<Long> findContractIdsForSuspension(@Param("companyId") Long companyId,
                                             @Param("suspensionDate") LocalDate suspensionDate);

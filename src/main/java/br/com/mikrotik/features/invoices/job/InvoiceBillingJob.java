@@ -1,23 +1,19 @@
 package br.com.mikrotik.features.invoices.job;
 
-import br.com.mikrotik.features.invoices.dto.InvoiceDTO;
+import br.com.mikrotik.features.invoices.dto.BillingResultDTO;
 import br.com.mikrotik.features.companies.model.Company;
 import br.com.mikrotik.features.contracts.model.Contract;
 import br.com.mikrotik.features.companies.repository.CompanyRepository;
 import br.com.mikrotik.features.contracts.repository.ContractRepository;
-import br.com.mikrotik.features.invoices.model.Invoice;
 import br.com.mikrotik.features.invoices.repository.InvoiceRepository;
 import br.com.mikrotik.features.contracts.service.ContractService;
-import br.com.mikrotik.features.invoices.service.InvoiceService;
+import br.com.mikrotik.features.invoices.service.BillingService;
 import br.com.mikrotik.shared.util.CompanyContextHolder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -30,14 +26,14 @@ public class InvoiceBillingJob {
     private final ContractRepository contractRepository;
     private final CompanyRepository companyRepository;
     private final InvoiceRepository invoiceRepository;
-    private final InvoiceService invoiceService;
     private final ContractService contractService;
+    private final BillingService billingService;
 
     /**
      * Job que roda todo dia 1º de cada mês às 01:00 AM
      * Gera faturas para todos os contratos ativos
      */
-    @Scheduled(cron = "0 0 1 1 * ?") // Dia 1º de cada mês às 01:00
+    @Scheduled(cron = "0 0 1 1 * ?", zone = "America/Sao_Paulo") // Dia 1º de cada mês às 01:00 (horário de Brasília)
     public void generateMonthlyInvoices() {
         log.info("========================================");
         log.info("INICIANDO GERAÇÃO AUTOMÁTICA DE FATURAS");
@@ -61,92 +57,31 @@ public class InvoiceBillingJob {
     }
 
     /**
-     * Gera faturas para uma empresa específica
+     * Delega para BillingService — evita duplicação de lógica.
+     * O contexto da empresa é configurado antes da chamada para garantir
+     * multi-tenancy correto nos repositórios que usam CompanyContextHolder.
      */
     private void generateInvoicesForCompany(Long companyId) {
-        log.info("Gerando faturas para empresa ID: {}", companyId);
-
-        // Definir contexto da empresa
         CompanyContextHolder.setCompanyId(companyId);
-
         try {
-            int currentDay = LocalDate.now().getDayOfMonth();
-
-            // Buscar contratos ativos para faturamento (todos os registros)
-            Page<Contract> contractsPage = contractRepository.findContractsForBilling(
-                companyId, currentDay, Pageable.unpaged());
-            List<Contract> contracts = contractsPage.getContent();
-
-            log.info("Encontrados {} contratos para faturamento na empresa {}", contracts.size(), companyId);
-
-            int successCount = 0;
-            int errorCount = 0;
-
-            for (Contract contract : contracts) {
-                try {
-                    generateInvoiceForContract(contract);
-                    successCount++;
-                } catch (Exception e) {
-                    errorCount++;
-                    log.error("Erro ao gerar fatura para contrato {}: {}", contract.getId(), e.getMessage());
-                }
+            BillingResultDTO result = billingService.generateMonthlyInvoices(companyId);
+            log.info("Empresa #{}: criadas={} ignoradas={} erros={}",
+                    companyId, result.created(), result.skipped(), result.errors());
+            if (!result.errorDetails().isEmpty()) {
+                result.errorDetails().forEach(detail ->
+                        log.error("  → Erro: {}", detail));
             }
-
-            log.info("Empresa {}: {} faturas geradas com sucesso, {} erros",
-                    companyId, successCount, errorCount);
-
         } finally {
-            // Limpar contexto
             CompanyContextHolder.clear();
         }
     }
 
-    /**
-     * Gera uma fatura para um contrato específico
-     */
-    private void generateInvoiceForContract(Contract contract) {
-        LocalDate today = LocalDate.now();
-        LocalDate referenceMonth = today.withDayOfMonth(1); // Primeiro dia do mês atual
-        LocalDate dueDate = today.withDayOfMonth(contract.getBillingDay());
-
-        // Se o dia de vencimento já passou neste mês, usar próximo mês
-        if (dueDate.isBefore(today)) {
-            dueDate = dueDate.plusMonths(1);
-        }
-
-        // Montar descrição
-        String monthYear = String.format("%02d/%d", today.getMonthValue(), today.getYear());
-        String description = String.format("Mensalidade Internet - %s", monthYear);
-
-        // Criar DTO da fatura
-        InvoiceDTO invoiceDTO = InvoiceDTO.builder()
-                .companyId(contract.getCompanyId())
-                .contractId(contract.getId())
-                .customerId(contract.getCustomerId())
-                .description(description)
-                .referenceMonth(referenceMonth)
-                .dueDate(dueDate)
-                .originalAmount(contract.getAmount())
-                .discountAmount(BigDecimal.ZERO)
-                .interestAmount(BigDecimal.ZERO)
-                .finalAmount(contract.getAmount())
-                .build();
-
-        // Criar fatura
-        InvoiceDTO createdInvoice = invoiceService.create(invoiceDTO);
-
-        log.info("Fatura {} gerada para contrato {} - Cliente: {} - Valor: R$ {}",
-                createdInvoice.getId(),
-                contract.getId(),
-                contract.getCustomer() != null ? contract.getCustomer().getName() : "N/A",
-                createdInvoice.getFinalAmount());
-    }
 
     /**
      * Job que roda diariamente às 02:00 AM
      * Atualiza status de faturas vencidas para OVERDUE
      */
-    @Scheduled(cron = "0 0 2 * * ?") // Todo dia às 02:00
+    @Scheduled(cron = "0 0 2 * * ?", zone = "America/Sao_Paulo") // Todo dia às 02:00 (horário de Brasília)
     public void updateOverdueInvoices() {
         log.info("========================================");
         log.info("ATUALIZANDO STATUS DE FATURAS VENCIDAS");
@@ -169,27 +104,15 @@ public class InvoiceBillingJob {
     }
 
     /**
-     * Atualiza faturas vencidas de uma empresa
+     * Atualiza faturas vencidas de uma empresa.
+     * Usa bulk UPDATE direto no banco — sem loop em memória, sem risco de
+     * paginação incompleta e sem depender do InvoiceService.
      */
     private void updateOverdueInvoicesForCompany(Long companyId) {
         CompanyContextHolder.setCompanyId(companyId);
-
         try {
-            // Buscar todas as faturas vencidas (sem paginação)
-            Page<InvoiceDTO> overdueInvoicesPage = invoiceService.findOverdue(Pageable.unpaged());
-            List<InvoiceDTO> overdueInvoices = overdueInvoicesPage.getContent();
-
-            int count = 0;
-            for (InvoiceDTO invoice : overdueInvoices) {
-                if (invoice.getStatus().name().equals("PENDING")) {
-                    invoiceService.updateStatus(invoice.getId(),
-                        Invoice.InvoiceStatus.OVERDUE);
-                    count++;
-                }
-            }
-
-            log.info("Empresa {}: {} faturas marcadas como vencidas", companyId, count);
-
+            int count = invoiceRepository.markOverduePendingInvoices(companyId, LocalDate.now());
+            log.info("Empresa {}: {} faturas PENDING marcadas como OVERDUE", companyId, count);
         } finally {
             CompanyContextHolder.clear();
         }
@@ -200,7 +123,7 @@ public class InvoiceBillingJob {
      * Suspende automaticamente contratos com faturas vencidas há X dias
      * X = suspension_days configurado na empresa (padrão: 5 dias)
      */
-    @Scheduled(cron = "0 0 3 * * ?") // Todo dia às 03:00
+    @Scheduled(cron = "0 0 3 * * ?", zone = "America/Sao_Paulo") // Todo dia às 03:00 (horário de Brasília)
     public void suspendOverdueContracts() {
         log.info("==========================================================");
         log.info("SUSPENSÃO AUTOMÁTICA DE CONTRATOS POR INADIMPLÊNCIA");

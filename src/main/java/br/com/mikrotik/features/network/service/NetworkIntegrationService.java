@@ -13,13 +13,14 @@ import br.com.mikrotik.features.network.server.model.MikrotikServer;
 import br.com.mikrotik.shared.infrastructure.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.event.EventListener;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.event.TransactionPhase;
-import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.time.LocalDateTime;
 
@@ -41,11 +42,25 @@ import java.time.LocalDateTime;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class NetworkIntegrationService {
+public class  NetworkIntegrationService {
 
     private final PppoeUserRepository pppoeUserRepository;
     private final ServicePlanRepository servicePlanRepository;
     private final MikrotikApiService mikrotikApiService;
+
+    /**
+     * Self-reference injetada via @Lazy para garantir que blockUserInMikrotik,
+     * unblockUserInMikrotik e deleteUserInMikrotik passem pelo proxy AOP do Spring,
+     * ativando o @Retryable corretamente.
+     *
+     * SEM isso: this.blockUserInMikrotik() → bypass do proxy → retry NUNCA ocorre.
+     * COM isso: self.blockUserInMikrotik() → passa pelo proxy → retry funciona.
+     *
+     * @Lazy evita dependência circular na inicialização do contexto Spring.
+     */
+    @Lazy
+    @Autowired
+    private NetworkIntegrationService self;
 
     // ==================== HANDLERS ====================
 
@@ -59,7 +74,7 @@ public class NetworkIntegrationService {
      * - SUSPENDED_* → ACTIVE: Desbloquear usuário
      */
     @Async("networkIntegrationExecutor")
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleContractStatusChange(ContractStatusChangedEvent event) {
         log.info("==========================================================");
         log.info("📡 PROCESSANDO INTEGRAÇÃO MIKROTIK - Contrato ID: {}", event.getContractId());
@@ -75,25 +90,23 @@ public class NetworkIntegrationService {
         }
 
         try {
-            // Determinar ação baseada na mudança de status
+            // Chamadas via self para passar pelo proxy AOP e garantir @Retryable
             if (shouldBlockUser(event.getPreviousStatus(), event.getNewStatus())) {
-                blockUserInMikrotik(event.getPppoeUserId(), event.getContractId());
+                self.blockUserInMikrotik(event.getPppoeUserId(), event.getContractId());
 
             } else if (shouldUnblockUser(event.getPreviousStatus(), event.getNewStatus())) {
-                unblockUserInMikrotik(event.getPppoeUserId(), event.getContractId());
+                self.unblockUserInMikrotik(event.getPppoeUserId(), event.getContractId());
 
             } else if (shouldDeleteUser(event.getNewStatus())) {
-                deleteUserInMikrotik(event.getPppoeUserId(), event.getContractId());
+                self.deleteUserInMikrotik(event.getPppoeUserId(), event.getContractId());
 
             } else {
                 log.info("ℹ️  Nenhuma ação necessária no Mikrotik para esta mudança de status");
             }
 
         } catch (Exception e) {
-            log.error("❌ ERRO ao processar integração Mikrotik para contrato {}",
-                    event.getContractId(), e);
-            // TODO: Criar AutomationLog de falha para revisão manual
-            // TODO: Enviar alerta para monitoramento
+            log.error("❌ ERRO ao processar integração Mikrotik para contrato {} após todas as tentativas de retry: {}",
+                    event.getContractId(), e.getMessage(), e);
         }
     }
 
